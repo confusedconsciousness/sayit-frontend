@@ -37,7 +37,6 @@ export default function HomePage() {
     return (
         <div>
             <h2 style={{fontSize: 22, fontWeight: 600, marginBottom: 8}}>Spaces</h2>
-
             <form onSubmit={onCreate} style={{display: 'grid', gap: 8, marginBottom: 16}}>
                 <input
                     value={newSpace}

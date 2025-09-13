@@ -5,7 +5,14 @@ import React, {useEffect, useState} from 'react';
 import {useUser} from '@/components/UserProvider';
 import {createPost, getPosts} from '@/lib/api';
 
-type Post = { id: string | number; title?: string; content?: string; [k: string]: any };
+type Post = {
+    id: string | number;
+    title?: string;
+    content?: string;
+    upvotes?: number,
+    downvotes?: number,
+    [k: string]: any
+};
 
 export default function SpacePage({params}: { params: Promise<{ space: string }> }) {
     const {space} = React.use(params);
@@ -66,6 +73,9 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                         <a href={`/${encodeURIComponent(space)}/${p.id}`}>
                             <div style={{fontWeight: 600}}>{p.title ?? `Post ${p.id}`}</div>
                             <div style={{color: '#666'}}>{p.content?.slice(0, 140)}</div>
+                            <div style={{color: '#888', fontSize: 13, marginTop: 6}}>
+                                by {p.author ?? 'anon'} • ▲{p.upvotes ?? 0} ▼{p.downvotes ?? 0}
+                            </div>
                         </a>
                     </li>
                 ))}

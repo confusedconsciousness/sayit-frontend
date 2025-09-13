@@ -38,6 +38,17 @@ export const createPost = (
 export const getPost = (space: string, postId: string | number) =>
     http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}`);
 
+export const upvotePost = (space: string, postId: string | number) =>
+    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/upvote`, {
+        method: 'PUT',
+    });
+
+export const downvotePost = (space: string, postId: string | number) =>
+    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/downvote`, {
+        method: 'PUT',
+    });
+
+
 // Comments
 export const addComment = (
     space: string,
@@ -49,6 +60,28 @@ export const addComment = (
         method: 'POST',
         body: JSON.stringify({comment, author}),
     });
+
+// lib/api.ts (additions)
+export const upvoteComment = (
+    space: string,
+    postId: string | number,
+    commentId: string | number,
+) =>
+    http<any>(
+        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${commentId}/upvote`,
+        {method: 'PUT'},
+    );
+
+export const downvoteComment = (
+    space: string,
+    postId: string | number,
+    commentId: string | number,
+) =>
+    http<any>(
+        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${commentId}/downvote`,
+        {method: 'PUT'},
+    );
+
 
 export const addReply = (
     space: string,

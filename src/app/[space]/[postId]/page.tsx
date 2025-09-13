@@ -2,13 +2,24 @@
 
 import {useUser} from '@/components/UserProvider';
 import React, {useEffect, useState} from 'react';
-import {addComment, addReply, getPost, getReplies} from '@/lib/api';
+import {
+    addComment,
+    addReply,
+    downvoteComment,
+    downvotePost,
+    getPost,
+    getReplies,
+    upvoteComment,
+    upvotePost
+} from '@/lib/api';
 
 type Comment = {
     id: string | number;
     comment?: string;
     author?: string;
     comments?: Comment[];
+    upvotes?: number;
+    downvotes?: number;
     [k: string]: any;
 };
 
@@ -24,21 +35,33 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
     const {user} = useUser();
     const {space, postId} = React.use(params);
     const [post, setPost] = useState<Post | null>(null);
+    const [loading, setLoading] = useState(true);
     const [topComment, setTopComment] = useState('');
 
     const load = async () => {
+        setLoading(true);
         try {
             const data = await getPost(space, postId);
             setPost(data);
         } catch (e) {
             console.error(e);
             alert('Failed to load post');
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
         load().then(r => console.log(r));
     }, [space, postId]);
+
+
+    const doVote = async (dir: 'up' | 'down') => {
+        if (!post) return;
+        if (dir === 'up') await upvotePost(space, post.id);
+        else await downvotePost(space, post.id);
+        await load();
+    };
 
     const submitTopComment = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,13 +71,75 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
         await load();
     };
 
-    if (!post) return <div>Loading...</div>;
+    if (loading || !post) return <div>Loading...</div>;
 
     return (
         <div>
             <a href={`/${encodeURIComponent(space)}`} style={{color: '#555'}}>← Back to /s/{space}</a>
-            <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>{post.title ?? `Post ${post.id}`}</h2>
-            <p style={{whiteSpace: 'pre-wrap'}}>{post.content}</p>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    margin: '8px 0',
+                }}
+            >
+                <h2 style={{fontSize: 22, fontWeight: 700, margin: 0}}>
+                    {post.title ?? `Post ${post.id}`}
+                </h2>
+                <span style={{fontSize: 15, color: '#6b7280'}}>
+          by {post.author ?? 'anon'}
+        </span>
+            </div>
+
+            <p style={{whiteSpace: 'pre-wrap', marginTop: 6}}>{post.content}</p>
+
+            {/* Compact vote controls */}
+            <div style={{display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0'}}>
+                <div
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 9999,
+                        padding: '2px 6px',
+                        background: '#f0f0f0',
+                    }}
+                >
+                    <button
+                        onClick={() => doVote('up')}
+                        style={{
+                            fontSize: 12,
+                            lineHeight: 1,
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            border: '1px solid #e5e7eb',
+                            background: 'black',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        ▲
+                    </button>
+                    <span style={{fontSize: 12, color: '#374151', fontWeight: 'bold'}}>{post.upvotes ?? 0}</span>
+                    <button
+                        onClick={() => doVote('down')}
+                        style={{
+                            fontSize: 12,
+                            lineHeight: 1,
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            border: '1px solid #e5e7eb',
+                            background: 'black',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        ▼
+                    </button>
+                    <span style={{fontSize: 12, color: '#374151', fontWeight: 'bold'}}>{post.downvotes ?? 0}</span>
+                </div>
+            </div>
 
             <form onSubmit={submitTopComment} style={{display: 'grid', gap: 8, marginTop: 16}}>
         <textarea
@@ -99,6 +184,9 @@ function CommentThread({
     const [children, setChildren] = useState<Comment[] | null>(comment.replies ?? null);
     const [loadingReplies, setLoadingReplies] = useState(false);
 
+    const [ups, setUps] = useState<number>(comment.upvotes ?? 0);
+    const [downs, setDowns] = useState<number>(comment.downvotes ?? 0);
+
     const loadReplies = async () => {
         if (children !== null) return; // already loaded or empty
         setLoadingReplies(true);
@@ -110,6 +198,28 @@ function CommentThread({
             alert('Failed to load replies');
         } finally {
             setLoadingReplies(false);
+        }
+    };
+
+    const vote = async (dir: 'up' | 'down') => {
+        try {
+            if (dir === 'up') {
+                setUps((v) => v + 1); // optimistic
+                await upvoteComment(space, postId, comment.id);
+            } else {
+                setDowns((v) => v + 1); // optimistic
+                await downvoteComment(space, postId, comment.id);
+            }
+            // Optional: refresh children if visible so nested counts stay current
+            if (children !== null) {
+                setChildren(null);
+                await loadReplies();
+            }
+        } catch (e) {
+            // rollback on failure
+            if (dir === 'up') setUps((v) => Math.max(0, v - 1));
+            else setDowns((v) => Math.max(0, v - 1));
+            console.error(e);
         }
     };
 
@@ -126,8 +236,50 @@ function CommentThread({
 
     return (
         <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
+
             <div style={{fontSize: 14}}>
                 <strong>{comment.author ?? 'anon'}</strong>: {comment.comment}
+            </div>
+            {/* Compact vote pill */}
+            <div
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '2px 6px',
+                    flexShrink: 0,
+                }}
+            >
+                <button
+                    onClick={() => vote('up')}
+                    style={{
+                        fontSize: 12,
+                        lineHeight: 1,
+                        borderRadius: 6,
+                        background: 'black',
+                        cursor: 'pointer',
+                    }}
+                    aria-label="Upvote"
+                    title="Upvote"
+                >
+                    ▲
+                </button>
+                <span style={{fontSize: 12, color: '#FFFFFF', fontWeight: 'bold'}}>{ups}</span>
+                <button
+                    onClick={() => vote('down')}
+                    style={{
+                        fontSize: 12,
+                        lineHeight: 1,
+                        borderRadius: 6,
+                        background: 'black',
+                        cursor: 'pointer',
+                    }}
+                    aria-label="Downvote"
+                    title="Downvote"
+                >
+                    ▼
+                </button>
+                <span style={{fontSize: 12, color: '#FFFFFF', fontWeight: 'bold'}}>{downs}</span>
             </div>
             <div style={{display: 'flex', gap: 8, marginTop: 4}}>
                 <button onClick={() => setReplyOpen((v) => !v)} style={{padding: '2px 6px'}}>
