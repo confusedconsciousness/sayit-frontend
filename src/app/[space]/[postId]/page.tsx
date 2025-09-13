@@ -1,5 +1,6 @@
 'use client';
 
+import {useUser} from '@/components/UserProvider';
 import React, {useEffect, useState} from 'react';
 import {addComment, addReply, getPost, getReplies} from '@/lib/api';
 
@@ -19,8 +20,9 @@ type Post = {
     [k: string]: any;
 };
 
-export default function PostPage({params}: { params: { space: string; postId: string } }) {
-    const {space, postId} = params;
+export default function PostPage({params}: { params: Promise<{ space: string; postId: string }> }) {
+    const {user} = useUser();
+    const {space, postId} = React.use(params);
     const [post, setPost] = useState<Post | null>(null);
     const [topComment, setTopComment] = useState('');
 
@@ -41,7 +43,7 @@ export default function PostPage({params}: { params: { space: string; postId: st
     const submitTopComment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!topComment.trim()) return;
-        await addComment(space, postId, topComment.trim());
+        await addComment(space, postId, topComment.trim(), user?.username ?? 'anon');
         setTopComment('');
         await load();
     };
@@ -91,6 +93,7 @@ function CommentThread({
     comment: Comment;
     depth?: number;
 }) {
+    const {user} = useUser();
     const [replyOpen, setReplyOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [children, setChildren] = useState<Comment[] | null>(comment.replies ?? null);
@@ -113,7 +116,7 @@ function CommentThread({
     const submitReply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!replyText.trim()) return;
-        await addReply(space, postId, comment.id, replyText.trim());
+        await addReply(space, postId, comment.id, replyText.trim(), user?.username ?? 'anon');
         setReplyText('');
         setReplyOpen(false);
         // refresh child list
