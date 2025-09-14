@@ -2,10 +2,14 @@
 import './globals.css';
 import React from 'react';
 import {UserProvider} from "@/components/UserProvider";
+import type { Metadata } from "next";
 
-export const metadata: { title: string; description: string } = {
+export const metadata: Metadata = {
     title: 'Sayit - It\'s your Space',
     description: 'Spaces, posts, and nested comments',
+    icons: {
+        icon: "/favicon.png"
+    }
 };
 
 export default function RootLayout({children}: { children: React.ReactNode }) {
