@@ -104,40 +104,23 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                         gap: 6,
                         border: '1px solid #e5e7eb',
                         borderRadius: 9999,
-                        padding: '2px 6px',
-                        background: '#f0f0f0',
+                        padding: '2px 8px',
                     }}
                 >
                     <button
                         onClick={() => doVote('up')}
-                        style={{
-                            fontSize: 12,
-                            lineHeight: 1,
-                            padding: '2px 6px',
-                            borderRadius: 6,
-                            border: '1px solid #e5e7eb',
-                            background: 'black',
-                            cursor: 'pointer',
-                        }}
+                        className={"voteButton"}
                     >
                         ▲
                     </button>
-                    <span style={{fontSize: 12, color: '#374151', fontWeight: 'bold'}}>{post.upvotes ?? 0}</span>
+                    <span className={"vote"}>{post.upvotes ?? 0}</span>
                     <button
                         onClick={() => doVote('down')}
-                        style={{
-                            fontSize: 12,
-                            lineHeight: 1,
-                            padding: '2px 6px',
-                            borderRadius: 6,
-                            border: '1px solid #e5e7eb',
-                            background: 'black',
-                            cursor: 'pointer',
-                        }}
+                        className={"voteButton"}
                     >
                         ▼
                     </button>
-                    <span style={{fontSize: 12, color: '#374151', fontWeight: 'bold'}}>{post.downvotes ?? 0}</span>
+                    <span className={"vote"}>{post.downvotes ?? 0}</span>
                 </div>
             </div>
 
@@ -252,40 +235,28 @@ function CommentThread({
             >
                 <button
                     onClick={() => vote('up')}
-                    style={{
-                        fontSize: 12,
-                        lineHeight: 1,
-                        borderRadius: 6,
-                        background: 'black',
-                        cursor: 'pointer',
-                    }}
+                    className={"voteButton"}
                     aria-label="Upvote"
                     title="Upvote"
                 >
                     ▲
                 </button>
-                <span style={{fontSize: 12, color: '#FFFFFF', fontWeight: 'bold'}}>{ups}</span>
+                <span className={"vote"}>{ups}</span>
                 <button
                     onClick={() => vote('down')}
-                    style={{
-                        fontSize: 12,
-                        lineHeight: 1,
-                        borderRadius: 6,
-                        background: 'black',
-                        cursor: 'pointer',
-                    }}
+                    className={"voteButton"}
                     aria-label="Downvote"
                     title="Downvote"
                 >
                     ▼
                 </button>
-                <span style={{fontSize: 12, color: '#FFFFFF', fontWeight: 'bold'}}>{downs}</span>
+                <span className={"vote"}>{downs}</span>
             </div>
             <div style={{display: 'flex', gap: 8, marginTop: 4}}>
-                <button onClick={() => setReplyOpen((v) => !v)} style={{padding: '2px 6px'}}>
+                <button onClick={() => setReplyOpen((v) => !v)} style={{padding: '2px 6px', cursor: 'pointer'}}>
                     {replyOpen ? 'Cancel' : 'Reply'}
                 </button>
-                <button onClick={loadReplies} style={{padding: '2px 6px'}} disabled={loadingReplies}>
+                <button onClick={loadReplies} style={{padding: '2px 6px', cursor: 'pointer'}} disabled={loadingReplies}>
                     {loadingReplies ? 'Loading…' : 'Load replies'}
                 </button>
             </div>
@@ -299,7 +270,9 @@ function CommentThread({
               placeholder="Write a reply"
               style={{border: '1px solid #ddd', padding: 6}}
           />
-                    <button type="submit" style={{width: 'fit-content', padding: '4px 8px'}}>Post reply</button>
+                    <button type="submit" style={{width: 'fit-content', padding: '4px 8px', cursor: 'pointer'}}>Post
+                        reply
+                    </button>
                 </form>
             )}
 

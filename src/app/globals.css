@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #FFFFFF;
   --foreground: #171717;
 }
 
@@ -17,6 +17,14 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+
+.voteButton {
+    cursor: pointer;
+}
+
+.vote {
+    font-size: 13px;
 }
 
 body {
