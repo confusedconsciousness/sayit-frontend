@@ -32,3 +32,13 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer theme, base, clerk, components, utilities;
+
+@layer clerk {
+    /* use the cl- prefixed class names here (Clerk's DOM uses cl-XXX) */
+    .cl-userButtonBox { @apply bg-black text-white rounded-full; }
+    .cl-userButtonOuterIdentifier { @apply text-white; }
+    .cl-userButtonPopoverCard { @apply bg-black text-white border border-gray-800; }
+    .cl-userButtonPopoverActionButton { @apply hover:bg-gray-800; }
+}

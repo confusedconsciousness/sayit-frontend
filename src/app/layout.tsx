@@ -1,8 +1,10 @@
 // app/layout.tsx
 import './globals.css';
 import React from 'react';
+import type {Metadata} from "next";
+import {ClerkProvider, UserButton} from "@clerk/nextjs";
 import {UserProvider} from "@/components/UserProvider";
-import type { Metadata } from "next";
+import Header from "@/components/Header";
 
 export const metadata: Metadata = {
     title: 'Sayit - It\'s your Space',
@@ -14,19 +16,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: { children: React.ReactNode }) {
     return (
-        <html lang="en">
-        <body style={{fontFamily: 'ui-sans-serif, system-ui', padding: 24}}>
-        <div style={{maxWidth: 900, margin: '0 auto'}}>
-            <nav style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <a href="/">Home</a>
-                <a href="/auth">Auth</a>
-            </nav>
-            <UserProvider>
-                <h1 style={{fontSize: 28, fontWeight: 700, marginBottom: 16}}>Sayit - It's your Space</h1>
-                {children}
-            </UserProvider>
-        </div>
-        </body>
-        </html>
+        <ClerkProvider appearance={{cssLayerName: 'clerk'}}>
+            <html lang="en">
+            <body style={{fontFamily: 'ui-sans-serif, system-ui', padding: 24}}>
+            <div style={{maxWidth: 900, margin: '0 auto'}}>
+
+                <div className={"flex justify-between align-middle mb-4"}>
+                    <Header/>
+                    <UserButton/>
+                </div>
+                <UserProvider>
+                    {children}
+                </UserProvider>
+            </div>
+            </body>
+            </html>
+
+        </ClerkProvider>
     );
 }
