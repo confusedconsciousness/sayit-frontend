@@ -1,23 +1,23 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
-import {useUser} from '@/components/UserProvider';
 import {createSpace, getSpaces} from '@/lib/api';
+import {useAuth} from "@clerk/nextjs";
 
 type Space = { id?: string | number; name?: string; description?: string };
 
 export default function HomePage() {
+    const {getToken} = useAuth();
     const [spaces, setSpaces] = useState<Space[]>([]);
     const [newSpace, setNewSpace] = useState('');
     const [desc, setDesc] = useState('');
-    const {user} = useUser();
+
     const load = async () => {
         try {
             const data = await getSpaces();
             setSpaces(data);
         } catch (e) {
             console.error(e);
-            alert('Failed to load spaces');
         }
     };
 
@@ -27,8 +27,9 @@ export default function HomePage() {
 
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+        const token = await getToken({template: 'with-username'}) as string;
         if (!newSpace.trim()) return;
-        await createSpace(newSpace.trim(), user?.username ?? 'anon', desc.trim());
+        await createSpace(newSpace.trim(), desc.trim(), token);
         setNewSpace('');
         setDesc('');
         await load();
@@ -51,7 +52,7 @@ export default function HomePage() {
                     rows={3}
                     style={{border: '1px solid #ddd', padding: 8}}
                 />
-                <button type="submit" className="border-1 p-2 hover:cursor-pointer mb-16">Create</button>
+                <button type="submit" className="border-1 p-2 hover:cursor-pointer mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300">Create</button>
             </form>
 
             <ul style={{display: 'grid', gap: 8}}>

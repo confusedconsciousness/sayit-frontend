@@ -1,25 +1,29 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
-async function http<T>(path: string, init?: RequestInit): Promise<T> {
+async function http<T>(path: string, token?: string, init?: RequestInit): Promise<T> {
     const res = await fetch(`${API_BASE}${path}`, {
         ...init,
         headers: {
             'Content-Type': 'application/json',
             ...(init?.headers || {}),
+            ...(token ? {Authorization: `Bearer ${token}`} : {}), // attach token
         },
     });
+
     if (!res.ok) {
         const msg = await res.text();
         throw new Error(`${res.status} ${res.statusText}: ${msg}`);
     }
-    return await res.json() as Promise<T>;
+    return (await res.json()) as T;
 }
 
+
 // Spaces
+export const getSpace = (space: string) => http<any[]>(`/v1/spaces/${encodeURIComponent(space)}`);
 export const getSpaces = () => http<any[]>('/v1/spaces');
 
-export const createSpace = (name: string, author: string, description: string) =>
-    http<any>('/v1/spaces', {method: 'POST', body: JSON.stringify({name, author, description})});
+export const createSpace = (name: string, description: string, token: string) =>
+    http<any>('/v1/spaces', token, {method: 'POST', body: JSON.stringify({name, description})});
 
 // Posts
 export const getPosts = (space: string) =>
@@ -29,22 +33,22 @@ export const createPost = (
     space: string,
     title: string,
     content: string,
-    author: string, // add author
+    token: string
 ) =>
-    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts`, {
+    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts`, token, {
         method: 'POST',
-        body: JSON.stringify({title, content, author}),
+        body: JSON.stringify({title, content}),
     });
 export const getPost = (space: string, postId: string | number) =>
     http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}`);
 
-export const upvotePost = (space: string, postId: string | number) =>
-    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/upvote`, {
+export const upvotePost = (space: string, postId: string | number, token: string) =>
+    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/upvote`, token, {
         method: 'PUT',
     });
 
-export const downvotePost = (space: string, postId: string | number) =>
-    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/downvote`, {
+export const downvotePost = (space: string, postId: string | number, token: string) =>
+    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/downvote`, token, {
         method: 'PUT',
     });
 
@@ -54,11 +58,11 @@ export const addComment = (
     space: string,
     postId: string | number,
     comment: string,
-    author: string,
+    token: string
 ) =>
-    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments`, {
+    http<any>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments`, token, {
         method: 'POST',
-        body: JSON.stringify({comment, author}),
+        body: JSON.stringify({comment}),
     });
 
 // lib/api.ts (additions)
@@ -66,9 +70,10 @@ export const upvoteComment = (
     space: string,
     postId: string | number,
     commentId: string | number,
+    token: string
 ) =>
     http<any>(
-        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${commentId}/upvote`,
+        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${commentId}/upvote`, token,
         {method: 'PUT'},
     );
 
@@ -76,9 +81,10 @@ export const downvoteComment = (
     space: string,
     postId: string | number,
     commentId: string | number,
+    token: string
 ) =>
     http<any>(
-        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${commentId}/downvote`,
+        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${commentId}/downvote`, token,
         {method: 'PUT'},
     );
 
@@ -88,11 +94,11 @@ export const addReply = (
     postId: string | number,
     parentId: string | number,
     comment: string,
-    author: string, // add author
+    token: string
 ) =>
     http<any>(
-        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${parentId}/replies`,
-        {method: 'POST', body: JSON.stringify({comment, author})},
+        `/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments/${parentId}/replies`, token,
+        {method: 'POST', body: JSON.stringify({comment})},
     );
 
 export const getReplies = (

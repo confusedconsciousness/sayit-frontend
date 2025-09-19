@@ -1,6 +1,5 @@
 'use client';
 
-import {useUser} from '@/components/UserProvider';
 import React, {useEffect, useState} from 'react';
 import {
     addComment,
@@ -12,6 +11,7 @@ import {
     upvoteComment,
     upvotePost
 } from '@/lib/api';
+import {useAuth} from "@clerk/nextjs";
 
 type Comment = {
     id: string | number;
@@ -32,7 +32,7 @@ type Post = {
 };
 
 export default function PostPage({params}: { params: Promise<{ space: string; postId: string }> }) {
-    const {user} = useUser();
+    const {getToken} = useAuth();
     const {space, postId} = React.use(params);
     const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState(true);
@@ -58,15 +58,53 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
 
     const doVote = async (dir: 'up' | 'down') => {
         if (!post) return;
-        if (dir === 'up') await upvotePost(space, post.id);
-        else await downvotePost(space, post.id);
-        await load();
+
+        // --- Start Optimistic Update ---
+
+        // 1. Store the original post state in case we need to revert
+        const originalPost = {...post};
+        // 2. Update the UI state immediately
+        // This is a simplified logic. It doesn't account for changing a vote.
+        // For a perfect count, you need to track the user's vote state (e.g., 'upvoted', 'downvoted', null)
+        const newPost = {...post};
+        if (dir === 'up') {
+            newPost.upvotes = (newPost.upvotes ?? 0) + 1;
+        } else {
+            newPost.downvotes = (newPost.downvotes ?? 0) + 1;
+        }
+        setPost(newPost);
+
+        // --- End Optimistic Update ---
+        try {
+            const token = await getToken({template: 'with-username'}) as string;
+
+            // 3. Make the API call in the background
+            const updatedCounts = dir === 'up'
+                ? await upvotePost(space, post.id, token)
+                // Assuming upvotePost now returns { upvotes: number, downvotes: number }
+                : await downvotePost(space, post.id, token);
+
+            // 4. (Optional but recommended) Sync with the exact counts from the server
+            // This corrects any discrepancies from the optimistic update.
+            setPost(prevPost => ({
+                ...prevPost!,
+                upvotes: updatedCounts.upvotes,
+                downvotes: updatedCounts.downvotes,
+            }));
+
+        } catch (error) {
+            // 5. If the API call fails, revert to the original state
+            console.error("Failed to vote:", error);
+            setPost(originalPost);
+            alert('Your vote could not be saved. Please try again.');
+        }
     };
 
     const submitTopComment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!topComment.trim()) return;
-        await addComment(space, postId, topComment.trim(), user?.username ?? 'anon');
+        const token = await getToken({template: 'with-username'}) as string;
+        await addComment(space, postId, topComment.trim(), token);
         setTopComment('');
         await load();
     };
@@ -161,7 +199,7 @@ function CommentThread({
     comment: Comment;
     depth?: number;
 }) {
-    const {user} = useUser();
+    const {getToken} = useAuth();
     const [replyOpen, setReplyOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [children, setChildren] = useState<Comment[] | null>(comment.replies ?? null);
@@ -185,23 +223,41 @@ function CommentThread({
     };
 
     const vote = async (dir: 'up' | 'down') => {
+        // --- Step 1: Store the original state for a potential rollback ---
+        const originalState = {ups, downs};
+
+        // --- Step 2: Calculate the changes based on the user's action ---
+        let upDelta = 0;
+        let downDelta = 0;
+
+        if (dir === 'up') {
+            upDelta = 1;
+        } else {
+            downDelta = 1
+        }
+
+        // --- Step 3: Apply the optimistic update to the UI immediately ---
+        // This makes the UI feel instantaneous.
+        setUps(v => v + upDelta);
+        setDowns(v => v + downDelta);
+
         try {
-            if (dir === 'up') {
-                setUps((v) => v + 1); // optimistic
-                await upvoteComment(space, postId, comment.id);
-            } else {
-                setDowns((v) => v + 1); // optimistic
-                await downvoteComment(space, postId, comment.id);
-            }
-            // Optional: refresh children if visible so nested counts stay current
-            if (children !== null) {
-                setChildren(null);
-                await loadReplies();
-            }
+            // --- Step 4: Make the API call in the background ---
+            const token = await getToken({template: 'with-username'}) as string;
+            const newCounts = dir === 'up'
+                ? await upvoteComment(space, postId, comment.id, token)
+                : await downvoteComment(space, postId, comment.id, token);
+
+            // --- Step 5: Sync with the authoritative server response ---
+            // This corrects any small discrepancies and ensures the final state is accurate.
+            setUps(newCounts.upvotes);
+            setDowns(newCounts.downvotes);
+
         } catch (e) {
-            // rollback on failure
-            if (dir === 'up') setUps((v) => Math.max(0, v - 1));
-            else setDowns((v) => Math.max(0, v - 1));
+            // --- Step 6: If the API fails, roll back to the original state ---
+            // This ensures the UI never shows a state that isn't saved on the server.
+            setUps(originalState.ups);
+            setDowns(originalState.downs);
             console.error(e);
         }
     };
@@ -209,7 +265,8 @@ function CommentThread({
     const submitReply = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!replyText.trim()) return;
-        await addReply(space, postId, comment.id, replyText.trim(), user?.username ?? 'anon');
+        const token = await getToken({template: 'with-username'}) as string;
+        await addReply(space, postId, comment.id, replyText.trim(), token);
         setReplyText('');
         setReplyOpen(false);
         // refresh child list

@@ -2,8 +2,8 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
-import {useUser} from '@/components/UserProvider';
-import {createPost, getPosts} from '@/lib/api';
+import {createPost, getPosts, getSpace, getSpaces} from '@/lib/api';
+import {useAuth} from "@clerk/nextjs";
 
 type Post = {
     id: string | number;
@@ -14,18 +14,25 @@ type Post = {
     [k: string]: any
 };
 
+type Space = { id?: string | number; name?: string; description?: string };
+
 export default function SpacePage({params}: { params: Promise<{ space: string }> }) {
+    const {getToken} = useAuth();
     const {space} = React.use(params);
+
+    const [spaceInfo, setSpaceInfo] = useState<Space>({});
     const [posts, setPosts] = useState<Post[]>([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-
-    const {user} = useUser();
 
     const load = async () => {
         try {
             const data = await getPosts(space);
             setPosts(data);
+            // fetch space data as well
+            const spaceData = await getSpace(space);
+            // @ts-ignore
+            setSpaceInfo(spaceData)
         } catch (e) {
             console.error(e);
             alert('Failed to load posts');
@@ -38,8 +45,9 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
 
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+        const token = await getToken({template: 'with-username'}) as string;
         if (!title.trim()) return;
-        await createPost(space, title.trim(), content.trim(), user?.username ?? 'anon');
+        await createPost(space, title.trim(), content.trim(), token);
         setTitle('');
         setContent('');
         await load();
@@ -49,7 +57,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
         <div>
             <a href="/" style={{color: '#555'}}>← Back</a>
             <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
-
+            <div className={"mt-2 mb-4 text-[#666]"}>{spaceInfo.description}</div>
             <form onSubmit={onCreate} style={{display: 'grid', gap: 8, marginBottom: 16}}>
                 <input
                     value={title}
@@ -64,7 +72,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                     rows={4}
                     style={{border: '1px solid #ddd', padding: 8}}
                 />
-                <button type="submit" className={"hover:cursor-pointer border-1 p-2 mb-16"}>Create Post</button>
+                <button type="submit" className={"hover:cursor-pointer border-1 p-2 mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300"}>Create Post</button>
             </form>
 
             <ul style={{display: 'grid', gap: 8}}>
