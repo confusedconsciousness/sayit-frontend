@@ -1,37 +1,38 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import {useAuth, useUser} from "@clerk/nextjs";
+import {useRouter} from "next/navigation";
+import {useEffect} from "react";
 
 export default function SyncUserPage() {
-    const { user, isLoaded } = useUser();
+    const {user, isLoaded} = useUser();
     const router = useRouter();
+    const {getToken} = useAuth();
 
     useEffect(() => {
         // We must wait for the Clerk user object to be fully loaded
+
         if (isLoaded && user) {
             const syncUser = async () => {
                 console.log("Syncing user to backend:", user.id);
+                const token = await getToken({template: 'with-username'}) as string;
                 try {
                     await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/v1/auth`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
                         body: JSON.stringify({
-                            clerkId: user.id, // Always use user.id as the stable identifier
-                            name: user.fullName,
+                            name: user.firstName,
                             email: user.primaryEmailAddress?.emailAddress,
-                            username: user.username,
-                            imageUrl: user.imageUrl,
+                            username: user.username
                         }),
                     });
 
                     // After the sync is complete, send them to the real destination
-                    router.push("/dashboard");
+                    router.push("/");
 
                 } catch (err) {
                     console.error("Failed to sync user:", err);
-                    router.push("/"); // Redirect home on error
+                    // router.push("/dasfasf"); // Redirect home on error
                 }
             };
 
