@@ -3,6 +3,7 @@
 import React, {useEffect, useState} from 'react';
 import {createSpace, getSpaces} from '@/lib/api';
 import {useAuth} from "@clerk/nextjs";
+import Link from "next/link";
 
 type Space = { id?: string | number; name?: string; description?: string };
 
@@ -52,7 +53,9 @@ export default function HomePage() {
                     rows={3}
                     style={{border: '1px solid #ddd', padding: 8}}
                 />
-                <button type="submit" className="border-1 p-2 hover:cursor-pointer mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300">Create</button>
+                <button type="submit"
+                        className="border-1 p-2 hover:cursor-pointer mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300">Create
+                </button>
             </form>
 
             <ul style={{display: 'grid', gap: 8}}>
@@ -60,7 +63,7 @@ export default function HomePage() {
                     const display = s?.name ?? s?.id ?? JSON.stringify(s);
                     return (
                         <li key={display} style={{border: '1px solid #eee', padding: 12}}>
-                            <a href={`/${encodeURIComponent(display as string)}`}>/s/{display}</a>
+                            <Link href={`/${encodeURIComponent(display as string)}`}>/s/{display}</Link>
                         </li>
                     );
                 })}

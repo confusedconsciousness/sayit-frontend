@@ -11,7 +11,7 @@ export default function Header() {
     return (
         <div className="flex justify-between items-center mb-4">
             {!hideHeading && (
-                <h1 className="text-4xl font-bold">Sayit - It's your Space</h1>
+                <h1 className="text-4xl font-bold">Sayit - It&apos;s your Space</h1>
             )}
         </div>
     );

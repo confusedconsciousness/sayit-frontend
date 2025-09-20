@@ -3,7 +3,6 @@ import './globals.css';
 import React from 'react';
 import type {Metadata} from "next";
 import {ClerkProvider, UserButton} from "@clerk/nextjs";
-import {UserProvider} from "@/components/UserProvider";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
@@ -25,9 +24,7 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
                     <Header/>
                     <UserButton/>
                 </div>
-                <UserProvider>
-                    {children}
-                </UserProvider>
+                {children}
             </div>
             </body>
             </html>

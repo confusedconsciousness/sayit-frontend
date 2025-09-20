@@ -2,19 +2,11 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
-import {createPost, getPosts, getSpace, getSpaces} from '@/lib/api';
+import {createPost, getPosts, getSpace} from '@/lib/api';
 import {useAuth} from "@clerk/nextjs";
+import {Post, Space} from "@/app/lib/types";
+import Link from "next/link";
 
-type Post = {
-    id: string | number;
-    title?: string;
-    content?: string;
-    upvotes?: number,
-    downvotes?: number,
-    [k: string]: any
-};
-
-type Space = { id?: string | number; name?: string; description?: string };
 
 export default function SpacePage({params}: { params: Promise<{ space: string }> }) {
     const {getToken} = useAuth();
@@ -31,7 +23,6 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
             setPosts(data);
             // fetch space data as well
             const spaceData = await getSpace(space);
-            // @ts-ignore
             setSpaceInfo(spaceData)
         } catch (e) {
             console.error(e);
@@ -40,7 +31,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
     };
 
     useEffect(() => {
-        load();
+        load().then(r => console.log(r));
     }, [space]);
 
     const onCreate = async (e: React.FormEvent) => {
@@ -55,7 +46,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
 
     return (
         <div>
-            <a href="/" style={{color: '#555'}}>← Back</a>
+            <Link href="/" style={{color: '#555'}}>← Back</Link>
             <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
             <div className={"mt-2 mb-4 text-[#666]"}>{spaceInfo.description}</div>
             <form onSubmit={onCreate} style={{display: 'grid', gap: 8, marginBottom: 16}}>
@@ -72,19 +63,22 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                     rows={4}
                     style={{border: '1px solid #ddd', padding: 8}}
                 />
-                <button type="submit" className={"hover:cursor-pointer border-1 p-2 mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300"}>Create Post</button>
+                <button type="submit"
+                        className={"hover:cursor-pointer border-1 p-2 mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300"}>Create
+                    Post
+                </button>
             </form>
 
             <ul style={{display: 'grid', gap: 8}}>
                 {posts.map((p) => (
                     <li key={String(p.id)} style={{border: '1px solid #eee', padding: 12}}>
-                        <a href={`/${encodeURIComponent(space)}/${p.id}`}>
+                        <Link href={`/${encodeURIComponent(space)}/${p.id}`}>
                             <div style={{fontWeight: 600}}>{p.title ?? `Post ${p.id}`}</div>
                             <div style={{color: '#666'}}>{p.content?.slice(0, 140)}</div>
                             <div style={{color: '#888', fontSize: 13, marginTop: 6}}>
                                 by {p.author ?? 'anon'} • ▲{p.upvotes ?? 0} ▼{p.downvotes ?? 0}
                             </div>
-                        </a>
+                        </Link>
                     </li>
                 ))}
             </ul>

@@ -32,11 +32,11 @@ export default function SyncUserPage() {
 
                 } catch (err) {
                     console.error("Failed to sync user:", err);
-                    // router.push("/dasfasf"); // Redirect home on error
+                    router.push("/"); // Redirect home on error
                 }
             };
 
-            syncUser();
+            syncUser().then(r => console.log(r));
         }
     }, [isLoaded, user, router]);
 

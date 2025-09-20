@@ -12,24 +12,7 @@ import {
     upvotePost
 } from '@/lib/api';
 import {useAuth} from "@clerk/nextjs";
-
-type Comment = {
-    id: string | number;
-    comment?: string;
-    author?: string;
-    comments?: Comment[];
-    upvotes?: number;
-    downvotes?: number;
-    [k: string]: any;
-};
-
-type Post = {
-    id: string | number;
-    title?: string;
-    content?: string;
-    comments?: Comment[]; // assuming backend may return top-level comments with the post
-    [k: string]: any;
-};
+import {AppComment, Post} from "@/app/lib/types";
 
 export default function PostPage({params}: { params: Promise<{ space: string; postId: string }> }) {
     const {getToken} = useAuth();
@@ -196,13 +179,13 @@ function CommentThread({
                        }: {
     space: string;
     postId: string | number;
-    comment: Comment;
+    comment: AppComment;
     depth?: number;
 }) {
     const {getToken} = useAuth();
     const [replyOpen, setReplyOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
-    const [children, setChildren] = useState<Comment[] | null>(comment.replies ?? null);
+    const [children, setChildren] = useState<AppComment[] | null>(comment.comments ?? null);
     const [loadingReplies, setLoadingReplies] = useState(false);
 
     const [ups, setUps] = useState<number>(comment.upvotes ?? 0);
@@ -223,42 +206,32 @@ function CommentThread({
     };
 
     const vote = async (dir: 'up' | 'down') => {
-        // --- Step 1: Store the original state for a potential rollback ---
         const originalState = {ups, downs};
 
-        // --- Step 2: Calculate the changes based on the user's action ---
-        let upDelta = 0;
-        let downDelta = 0;
-
-        if (dir === 'up') {
-            upDelta = 1;
-        } else {
-            downDelta = 1
-        }
-
-        // --- Step 3: Apply the optimistic update to the UI immediately ---
-        // This makes the UI feel instantaneous.
+        // Optimistic update logic...
+        const upDelta = dir === 'up' ? 1 : 0;
+        const downDelta = dir === 'down' ? 1 : 0;
         setUps(v => v + upDelta);
         setDowns(v => v + downDelta);
 
         try {
-            // --- Step 4: Make the API call in the background ---
             const token = await getToken({template: 'with-username'}) as string;
             const newCounts = dir === 'up'
                 ? await upvoteComment(space, postId, comment.id, token)
                 : await downvoteComment(space, postId, comment.id, token);
 
-            // --- Step 5: Sync with the authoritative server response ---
-            // This corrects any small discrepancies and ensures the final state is accurate.
-            setUps(newCounts.upvotes);
-            setDowns(newCounts.downvotes);
+            // --- FIX IS HERE ---
+            // Use the nullish coalescing operator '??' to provide a fallback value.
+            // If newCounts.upvotes is undefined, it will use the original value instead.
+            setUps(newCounts.upvotes ?? originalState.ups);
+            setDowns(newCounts.downvotes ?? originalState.downs);
 
         } catch (e) {
-            // --- Step 6: If the API fails, roll back to the original state ---
-            // This ensures the UI never shows a state that isn't saved on the server.
+            // Roll back to the original state on failure
             setUps(originalState.ups);
             setDowns(originalState.downs);
             console.error(e);
+            alert('Your vote could not be saved.'); // Provide user feedback
         }
     };
 
