@@ -13,13 +13,17 @@ export default function HomePage() {
     const [newSpace, setNewSpace] = useState('');
     const [desc, setDesc] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // NEW
 
     const load = async () => {
+        setIsLoading(true); // NEW
         try {
             const data = await getSpaces();
             setSpaces(data);
         } catch (e) {
             console.error(e);
+        } finally {
+            setIsLoading(false); // NEW
         }
     };
 
@@ -29,7 +33,7 @@ export default function HomePage() {
 
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isCreating) return; // guard against double submit
+        if (isCreating) return;
         if (!newSpace.trim()) return;
 
         setIsCreating(true);
@@ -38,7 +42,7 @@ export default function HomePage() {
             await createSpace(newSpace.trim(), desc.trim(), token);
             setNewSpace('');
             setDesc('');
-            await load();
+            await load(); // will show spinner while reloading
         } catch (err) {
             console.error(err);
         } finally {
@@ -75,22 +79,44 @@ export default function HomePage() {
                 <button
                     type="submit"
                     disabled={isCreating || !newSpace.trim()}
-                    className="border-1 p-2 hover:cursor-pointer mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300"
+                    className="border-1 p-2 hover:cursor-pointer mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {isCreating ? 'Creating…' : 'Create'}
+                    {isCreating ? (
+                        <span className="inline-flex items-center">
+              <span
+                  className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+                  aria-hidden="true"
+              />
+              Creating…
+            </span>
+                    ) : (
+                        'Create'
+                    )}
                 </button>
             </form>
 
-            <ul style={{display: 'grid', gap: 8}}>
-                {spaces.map((s) => {
-                    const display = s?.name ?? s?.id ?? JSON.stringify(s);
-                    return (
-                        <li key={display} className={"border border-[#eee] p-2 flex"} >
-                            <Link className={'w-full'} href={`/${encodeURIComponent(display as string)}`}>/s/{display}</Link>
-                        </li>
-                    );
-                })}
-            </ul>
+            {isLoading ? (
+                <div className="flex items-center justify-center py-12 text-gray-600">
+          <span
+              className="mr-2 inline-block h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+              aria-hidden="true"
+          />
+                    Loading spaces…
+                </div>
+            ) : (
+                <ul style={{ display: 'grid', gap: 8 }}>
+                    {spaces.map((s) => {
+                        const display = s?.name ?? s?.id ?? JSON.stringify(s);
+                        return (
+                            <li key={display} className="border border-[#eee] p-2 flex">
+                                <Link className="w-full" href={`/${encodeURIComponent(display as string)}`}>
+                                    /s/{display}
+                                </Link>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
         </div>
     );
 }
