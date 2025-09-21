@@ -20,6 +20,7 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
     const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState(true);
     const [topComment, setTopComment] = useState('');
+    const [submittingTop, setSubmittingTop] = useState(false); // NEW
 
     const load = async () => {
         setLoading(true);
@@ -85,11 +86,21 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
 
     const submitTopComment = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!topComment.trim()) return;
-        const token = await getToken({template: 'with-username'}) as string;
-        await addComment(space, postId, topComment.trim(), token);
-        setTopComment('');
-        await load();
+        if (!topComment.trim() || submittingTop) return;
+
+        setSubmittingTop(true);
+        try {
+            const token = (await getToken({template: 'with-username'})) as string;
+            await addComment(space, postId, topComment.trim(), token);
+            setTopComment('');
+            await load();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to add comment');
+        } finally {
+            setSubmittingTop(false);
+        }
+
     };
 
     if (loading || !post) return <div>Loading...</div>;
@@ -145,7 +156,8 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 </div>
             </div>
 
-            <form onSubmit={submitTopComment} style={{display: 'grid', gap: 8, marginTop: 16}}>
+            <form onSubmit={submitTopComment} style={{display: 'grid', gap: 8, marginTop: 16}}
+                  aria-busy={submittingTop}>
         <textarea
             value={topComment}
             onChange={(e) => setTopComment(e.target.value)}
@@ -153,7 +165,14 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
             rows={3}
             style={{border: '1px solid #ddd', padding: 8}}
         />
-                <button type="submit" className={"hover:cursor-pointer border-1 p-2 mb-16"}>Comment</button>
+                <button
+                    type="submit"
+                    disabled={submittingTop}
+                    aria-busy={submittingTop}
+                    className={"hover:cursor-pointer border-1 p-2 mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300"}
+                >
+                    {submittingTop ? 'Commenting…' : 'Comment'}
+                </button>
             </form>
 
             <h3 style={{marginTop: 24}}>Comments</h3>
@@ -187,6 +206,8 @@ function CommentThread({
     const [replyText, setReplyText] = useState('');
     const [children, setChildren] = useState<AppComment[] | null>(comment.comments ?? null);
     const [loadingReplies, setLoadingReplies] = useState(false);
+
+    const [replySubmitting, setReplySubmitting] = useState(false);
 
     const [ups, setUps] = useState<number>(comment.upvotes ?? 0);
     const [downs, setDowns] = useState<number>(comment.downvotes ?? 0);
@@ -237,14 +258,24 @@ function CommentThread({
 
     const submitReply = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!replyText.trim()) return;
-        const token = await getToken({template: 'with-username'}) as string;
-        await addReply(space, postId, comment.id, replyText.trim(), token);
-        setReplyText('');
-        setReplyOpen(false);
-        // refresh child list
-        setChildren(null);
-        await loadReplies();
+        if (!replyText.trim() || replySubmitting) return;
+
+        setReplySubmitting(true);
+        try {
+            const token = await getToken({template: 'with-username'}) as string;
+            await addReply(space, postId, comment.id, replyText.trim(), token);
+            setReplyText('');
+            setReplyOpen(false);
+            // refresh child list
+            setChildren(null);
+            await loadReplies();
+        } catch (e) {
+            console.error(e);
+            alert('Failed to post reply');
+        } finally {
+            setReplySubmitting(false);
+        }
+
     };
 
     return (
@@ -292,7 +323,8 @@ function CommentThread({
             </div>
 
             {replyOpen && (
-                <form onSubmit={submitReply} style={{display: 'grid', gap: 6, marginTop: 6}}>
+                <form onSubmit={submitReply} style={{display: 'grid', gap: 6, marginTop: 6}}
+                      aria-busy={replySubmitting}>
           <textarea
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
@@ -300,8 +332,9 @@ function CommentThread({
               placeholder="Write a reply"
               style={{border: '1px solid #ddd', padding: 6}}
           />
-                    <button type="submit" style={{width: 'fit-content', padding: '4px 8px', cursor: 'pointer'}}>Post
-                        reply
+                    <button type="submit" style={{width: 'fit-content', padding: '4px 8px', cursor: 'pointer'}}
+                            disabled={replySubmitting} aria-busy={replySubmitting}>
+                        {replySubmitting ? 'Posting…' : 'Post reply'}
                     </button>
                 </form>
             )}

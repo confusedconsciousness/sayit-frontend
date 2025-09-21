@@ -16,12 +16,13 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
     const [posts, setPosts] = useState<Post[]>([]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+    // 1. Add a new state to track the loading status
+    const [isCreatingPost, setIsCreatingPost] = useState(false);
 
     const load = async () => {
         try {
             const data = await getPosts(space);
             setPosts(data);
-            // fetch space data as well
             const spaceData = await getSpace(space);
             setSpaceInfo(spaceData)
         } catch (e) {
@@ -36,12 +37,23 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
 
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        const token = await getToken({template: 'with-username'}) as string;
-        if (!title.trim()) return;
-        await createPost(space, title.trim(), content.trim(), token);
-        setTitle('');
-        setContent('');
-        await load();
+        if (!title.trim() || isCreatingPost) return; // Prevent submission if already creating
+
+        // 2. Set loading to true before the API call
+        setIsCreatingPost(true);
+        try {
+            const token = await getToken({template: 'with-username'}) as string;
+            await createPost(space, title.trim(), content.trim(), token);
+            setTitle('');
+            setContent('');
+            await load();
+        } catch (error) {
+            console.error("Failed to create post:", error);
+            alert("Failed to create post. Please try again.");
+        } finally {
+            // 3. Set loading to false after the operation completes (or fails)
+            setIsCreatingPost(false);
+        }
     };
 
     return (
@@ -63,9 +75,13 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                     rows={4}
                     style={{border: '1px solid #ddd', padding: 8}}
                 />
-                <button type="submit"
-                        className={"hover:cursor-pointer border-1 p-2 mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300"}>Create
-                    Post
+                {/* 4. Disable the button and change its text based on the loading state */}
+                <button
+                    type="submit"
+                    disabled={isCreatingPost}
+                    className={"hover:cursor-pointer border-1 p-2 mb-16 dark:hover:bg-white dark:hover:text-black transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"}
+                >
+                    {isCreatingPost ? 'Creating...' : 'Create Post'}
                 </button>
             </form>
 

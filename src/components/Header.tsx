@@ -2,6 +2,7 @@
 "use client";
 
 import {usePathname} from "next/navigation";
+import Link from "next/link";
 
 export default function Header() {
     const pathname = usePathname();
@@ -11,7 +12,7 @@ export default function Header() {
     return (
         <div className="flex justify-between items-center mb-4">
             {!hideHeading && (
-                <h1 className="text-4xl font-bold">Sayit - It&apos;s your Space</h1>
+                <Link href={'/'} className="text-4xl font-bold">Sayit - It&apos;s your Space</Link>
             )}
         </div>
     );
