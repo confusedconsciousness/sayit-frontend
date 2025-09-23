@@ -1,13 +1,34 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
-import { addComment, addReply, downvoteComment, downvotePost, getPost, getReplies, upvoteComment, upvotePost } from '@/lib/api';
-import { useAuth } from '@clerk/nextjs';
-import { AppComment, Post } from '@/app/lib/types';
+import {
+    addComment,
+    addReply,
+    downvoteComment,
+    downvotePost,
+    getPost,
+    getReplies,
+    upvoteComment,
+    upvotePost,
+} from '@/lib/api';
+import {useAuth} from '@clerk/nextjs';
+import {AppComment, Post} from '@/app/lib/types';
+import {getCachedData, invalidateCache} from '@/lib/cacheutils';
+import Link from "next/link";
+
+function getCachedPost(space: string, postId: string): Promise<Post> {
+    return getCachedData<Post>(`post_${space}_${postId}`, () => getPost(space, postId));
+}
+
+function getCachedReplies(space: string, postId: string, commentId: number | string): Promise<AppComment[]> {
+    return getCachedData<AppComment[]>(`replies_${space}_${postId}_${commentId}`, () =>
+        getReplies(space, postId, commentId)
+    );
+}
 
 export default function PostPage({params}: { params: Promise<{ space: string; postId: string }> }) {
-    const { getToken } = useAuth();
-    const { space, postId } = React.use(params);
+    const {getToken} = useAuth();
+    const {space, postId} = React.use(params);
 
     const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState(true);
@@ -17,7 +38,7 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
     const load = async () => {
         setLoading(true);
         try {
-            const data = await getPost(space, postId);
+            const data = await getCachedPost(space, postId);
             setPost(data);
         } catch (e) {
             console.error(e);
@@ -28,28 +49,30 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
     };
 
     useEffect(() => {
-        load();
+        load().then(r => console.log(r));
     }, [space, postId]);
 
     const doVote = async (dir: 'up' | 'down') => {
         if (!post) return;
-        const originalPost = { ...post };
-        const newPost = { ...post };
+        const originalPost = {...post};
+        const newPost = {...post};
         if (dir === 'up') newPost.upvotes = (newPost.upvotes ?? 0) + 1;
         else newPost.downvotes = (newPost.downvotes ?? 0) + 1;
         setPost(newPost);
 
         try {
-            const token = await getToken({ template: 'with-username' }) as string;
-            const updatedCounts = dir === 'up'
-                ? await upvotePost(space, post.id, token)
-                : await downvotePost(space, post.id, token);
-
-            setPost(prev => ({
+            const token = (await getToken({template: 'with-username'})) as string;
+            const updatedCounts =
+                dir === 'up'
+                    ? await upvotePost(space, post.id, token)
+                    : await downvotePost(space, post.id, token);
+            setPost((prev) => ({
                 ...prev!,
                 upvotes: updatedCounts.upvotes,
                 downvotes: updatedCounts.downvotes,
             }));
+            // Invalidate cache to ensure fresh data on next reload
+            invalidateCache(`post_${space}_${postId}`);
         } catch (error) {
             console.error('Failed to vote:', error);
             setPost(originalPost);
@@ -63,8 +86,9 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
 
         setSubmittingTop(true);
         try {
-            const token = (await getToken({ template: 'with-username' })) as string;
+            const token = (await getToken({template: 'with-username'})) as string;
             await addComment(space, postId, topComment.trim(), token);
+            invalidateCache(`post_${space}_${postId}`);
             setTopComment('');
             await load();
         } catch (err) {
@@ -78,10 +102,10 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
     if (loading || !post) {
         return (
             <div className="flex items-center justify-center py-12 text-gray-600">
-        <span
-            className="mr-2 inline-block h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-            aria-hidden="true"
-        />
+                <span
+                    className="mr-2 inline-block h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+                    aria-hidden="true"
+                />
                 Loading post…
             </div>
         );
@@ -89,36 +113,58 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
 
     return (
         <div>
-            <a href={`/${encodeURIComponent(space)}`} style={{ color: '#555' }}>← Back to /s/{space}</a>
+            <Link href={`/${encodeURIComponent(space)}`} style={{color: '#555'}}>
+                ← Back to /s/{space}
+            </Link>
 
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, margin: '8px 0' }}>
-                <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    margin: '8px 0',
+                }}
+            >
+                <h2 style={{fontSize: 22, fontWeight: 700, margin: 0}}>
                     {post.title ?? `Post ${post.id}`}
                 </h2>
-                <span style={{ fontSize: 15, color: '#6b7280' }}>
-          by {post.author ?? 'anon'}
-        </span>
+                <span style={{fontSize: 15, color: '#6b7280'}}>by {post.author ?? 'anon'}</span>
             </div>
 
-            <p style={{ whiteSpace: 'pre-wrap', marginTop: 6 }}>{post.content}</p>
+            <p style={{whiteSpace: 'pre-wrap', marginTop: 6}}>{post.content}</p>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid #e5e7eb', borderRadius: 9999, padding: '2px 8px' }}>
-                    <button onClick={() => doVote('up')} className="voteButton">▲</button>
+            <div style={{display: 'flex', alignItems: 'center', gap: 10, margin: '12px 0'}}>
+                <div
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 9999,
+                        padding: '2px 8px',
+                    }}
+                >
+                    <button onClick={() => doVote('up')} className="voteButton">
+                        ▲
+                    </button>
                     <span className="vote">{post.upvotes ?? 0}</span>
-                    <button onClick={() => doVote('down')} className="voteButton">▼</button>
+                    <button onClick={() => doVote('down')} className="voteButton">
+                        ▼
+                    </button>
                     <span className="vote">{post.downvotes ?? 0}</span>
                 </div>
             </div>
 
-            <form onSubmit={submitTopComment} style={{ display: 'grid', gap: 8, marginTop: 16 }} aria-busy={submittingTop}>
-        <textarea
-            value={topComment}
-            onChange={(e) => setTopComment(e.target.value)}
-            placeholder="Add a comment"
-            rows={3}
-            style={{ border: '1px solid #ddd', padding: 8 }}
-        />
+            <form onSubmit={submitTopComment} style={{display: 'grid', gap: 8, marginTop: 16}}
+                  aria-busy={submittingTop}>
+                <textarea
+                    value={topComment}
+                    onChange={(e) => setTopComment(e.target.value)}
+                    placeholder="Add a comment"
+                    rows={3}
+                    style={{border: '1px solid #ddd', padding: 8}}
+                />
                 <button
                     type="submit"
                     disabled={submittingTop || !topComment.trim()}
@@ -127,22 +173,22 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 >
                     {submittingTop ? (
                         <span className="inline-flex items-center">
-              <span
-                  className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-                  aria-hidden="true"
-              />
-              Commenting…
-            </span>
+                            <span
+                                className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+                                aria-hidden="true"
+                            />
+                            Commenting…
+                        </span>
                     ) : (
                         'Comment'
                     )}
                 </button>
             </form>
 
-            <h3 style={{ marginTop: 24 }}>Comments</h3>
-            <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+            <h3 style={{marginTop: 24}}>Comments</h3>
+            <div style={{display: 'grid', gap: 8, marginTop: 8}}>
                 {(post.comments ?? []).map((c) => (
-                    <CommentThread key={String(c.id)} space={space} postId={postId} comment={c} />
+                    <CommentThread key={String(c.id)} space={space} postId={postId} comment={c}/>
                 ))}
             </div>
         </div>
@@ -156,11 +202,11 @@ function CommentThread({
                            depth = 0,
                        }: {
     space: string;
-    postId: string | number;
+    postId: string;
     comment: AppComment;
     depth?: number;
 }) {
-    const { getToken } = useAuth();
+    const {getToken} = useAuth();
     const [replyOpen, setReplyOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [children, setChildren] = useState<AppComment[] | null>(comment.comments ?? null);
@@ -173,7 +219,7 @@ function CommentThread({
         if (children !== null) return;
         setLoadingReplies(true);
         try {
-            const data = await getReplies(space, postId, comment.id);
+            const data = await getCachedReplies(space, postId, comment.id);
             setChildren(data);
         } catch (e) {
             console.error(e);
@@ -184,16 +230,17 @@ function CommentThread({
     };
 
     const vote = async (dir: 'up' | 'down') => {
-        const originalState = { ups, downs };
+        const originalState = {ups, downs};
         const upDelta = dir === 'up' ? 1 : 0;
         const downDelta = dir === 'down' ? 1 : 0;
-        setUps(v => v + upDelta);
-        setDowns(v => v + downDelta);
+        setUps((v) => v + upDelta);
+        setDowns((v) => v + downDelta);
         try {
-            const token = await getToken({ template: 'with-username' }) as string;
-            const newCounts = dir === 'up'
-                ? await upvoteComment(space, postId, comment.id, token)
-                : await downvoteComment(space, postId, comment.id, token);
+            const token = (await getToken({template: 'with-username'})) as string;
+            const newCounts =
+                dir === 'up'
+                    ? await upvoteComment(space, postId, comment.id, token)
+                    : await downvoteComment(space, postId, comment.id, token);
             setUps(newCounts.upvotes ?? originalState.ups);
             setDowns(newCounts.downvotes ?? originalState.downs);
         } catch (e) {
@@ -210,8 +257,10 @@ function CommentThread({
 
         setReplySubmitting(true);
         try {
-            const token = await getToken({ template: 'with-username' }) as string;
+            const token = (await getToken({template: 'with-username'})) as string;
             await addReply(space, postId, comment.id, replyText.trim(), token);
+            invalidateCache(`replies_${space}_${postId}_${comment.id}`);
+
             setReplyText('');
             setReplyOpen(false);
             setChildren(null);
@@ -225,31 +274,35 @@ function CommentThread({
     };
 
     return (
-        <div style={{ marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8 }}>
-            <div style={{ fontSize: 14 }}>
+        <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
+            <div style={{fontSize: 14}}>
                 <strong>{comment.author ?? 'anon'}</strong>: {comment.comment}
             </div>
 
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 6px', flexShrink: 0 }}>
-                <button onClick={() => vote('up')} className="voteButton" aria-label="Upvote" title="Upvote">▲</button>
+            <div style={{display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 6px', flexShrink: 0}}>
+                <button onClick={() => vote('up')} className="voteButton" aria-label="Upvote" title="Upvote">
+                    ▲
+                </button>
                 <span className="vote">{ups}</span>
-                <button onClick={() => vote('down')} className="voteButton" aria-label="Downvote" title="Downvote">▼</button>
+                <button onClick={() => vote('down')} className="voteButton" aria-label="Downvote" title="Downvote">
+                    ▼
+                </button>
                 <span className="vote">{downs}</span>
             </div>
 
-            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                <button onClick={() => setReplyOpen((v) => !v)} style={{ padding: '2px 6px', cursor: 'pointer' }}>
+            <div style={{display: 'flex', gap: 8, marginTop: 4}}>
+                <button onClick={() => setReplyOpen((v) => !v)} style={{padding: '2px 6px', cursor: 'pointer'}}>
                     {replyOpen ? 'Cancel' : 'Reply'}
                 </button>
-                <button onClick={loadReplies} style={{ padding: '2px 6px', cursor: 'pointer' }} disabled={loadingReplies}>
+                <button onClick={loadReplies} style={{padding: '2px 6px', cursor: 'pointer'}} disabled={loadingReplies}>
                     {loadingReplies ? (
                         <span className="inline-flex items-center text-gray-700">
-              <span
-                  className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-                  aria-hidden="true"
-              />
-              Loading…
-            </span>
+                            <span
+                                className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+                                aria-hidden="true"
+                            />
+                            Loading…
+                        </span>
                     ) : (
                         'Load replies'
                     )}
@@ -258,37 +311,38 @@ function CommentThread({
 
             {loadingReplies && children === null && (
                 <div className="mt-2 flex items-center text-gray-600">
-          <span
-              className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-              aria-hidden="true"
-          />
+                    <span
+                        className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+                        aria-hidden="true"
+                    />
                     Loading replies…
                 </div>
             )}
 
             {replyOpen && (
-                <form onSubmit={submitReply} style={{ display: 'grid', gap: 6, marginTop: 6 }} aria-busy={replySubmitting}>
-          <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              rows={2}
-              placeholder="Write a reply"
-              style={{ border: '1px solid #ddd', padding: 6 }}
-          />
+                <form onSubmit={submitReply} style={{display: 'grid', gap: 6, marginTop: 6}}
+                      aria-busy={replySubmitting}>
+                    <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        rows={2}
+                        placeholder="Write a reply"
+                        style={{border: '1px solid #ddd', padding: 6}}
+                    />
                     <button
                         type="submit"
-                        style={{ width: 'fit-content', padding: '4px 8px', cursor: 'pointer' }}
+                        style={{width: 'fit-content', padding: '4px 8px', cursor: 'pointer'}}
                         disabled={replySubmitting}
                         aria-busy={replySubmitting}
                     >
                         {replySubmitting ? (
                             <span className="inline-flex items-center">
-                <span
-                    className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-                    aria-hidden="true"
-                />
-                Posting…
-              </span>
+                                <span
+                                    className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
+                                    aria-hidden="true"
+                                />
+                                Posting…
+                            </span>
                         ) : (
                             'Post reply'
                         )}
@@ -297,15 +351,10 @@ function CommentThread({
             )}
 
             {children && children.length > 0 && (
-                <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                <div style={{display: 'grid', gap: 8, marginTop: 8}}>
                     {children.map((child) => (
-                        <CommentThread
-                            key={String(child.id)}
-                            space={space}
-                            postId={postId}
-                            comment={child}
-                            depth={depth + 1}
-                        />
+                        <CommentThread key={String(child.id)} space={space} postId={postId} comment={child}
+                                       depth={depth + 1}/>
                     ))}
                 </div>
             )}

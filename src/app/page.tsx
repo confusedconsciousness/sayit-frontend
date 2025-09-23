@@ -4,8 +4,8 @@ import React, {useEffect, useState} from 'react';
 import {createSpace, getSpaces} from '@/lib/api';
 import {useAuth} from '@clerk/nextjs';
 import Link from 'next/link';
-
-type Space = { id?: string | number; name?: string; description?: string };
+import {Space} from "@/app/lib/types";
+import {getCachedData, invalidateCache} from "@/lib/cacheutils";
 
 export default function HomePage() {
     const {getToken} = useAuth();
@@ -18,7 +18,7 @@ export default function HomePage() {
     const load = async () => {
         setIsLoading(true); // NEW
         try {
-            const data = await getSpaces();
+            const data = await getCachedData('spaces', getSpaces);
             setSpaces(data);
         } catch (e) {
             console.error(e);
@@ -47,6 +47,7 @@ export default function HomePage() {
         try {
             const token = (await getToken({template: 'with-username'})) as string;
             await createSpace(newSpace.trim().toLowerCase(), desc.trim(), token);
+            invalidateCache('spaces');
             setNewSpace('');
             setDesc('');
             await load(); // will show spinner while reloading
