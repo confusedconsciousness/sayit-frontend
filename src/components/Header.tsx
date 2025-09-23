@@ -12,7 +12,7 @@ export default function Header() {
     return (
         <div className="flex justify-between items-center mb-4">
             {!hideHeading && (
-                <Link href={'/'} className="text-4xl font-bold">Sayit - It&apos;s your Space</Link>
+                <Link href={'/'} className="text-4xl font-bold">JustSayit - It&apos;s your Space</Link>
             )}
         </div>
     );

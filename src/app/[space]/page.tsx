@@ -65,13 +65,13 @@ export default function SpacePage({ params }: { params: Promise<{ space: string 
                 <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Post Title"
+                    placeholder="What is on your mind?"
                     style={{ border: '1px solid #ddd', padding: 8 }}
                 />
                 <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder="Post Content"
+                    placeholder="Description (optional)"
                     rows={4}
                     style={{ border: '1px solid #ddd', padding: 8 }}
                 />

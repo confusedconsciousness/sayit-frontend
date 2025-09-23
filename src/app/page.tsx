@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { createSpace, getSpaces } from '@/lib/api';
-import { useAuth } from '@clerk/nextjs';
+import React, {useEffect, useState} from 'react';
+import {createSpace, getSpaces} from '@/lib/api';
+import {useAuth} from '@clerk/nextjs';
 import Link from 'next/link';
 
 type Space = { id?: string | number; name?: string; description?: string };
 
 export default function HomePage() {
-    const { getToken } = useAuth();
+    const {getToken} = useAuth();
     const [spaces, setSpaces] = useState<Space[]>([]);
     const [newSpace, setNewSpace] = useState('');
     const [desc, setDesc] = useState('');
@@ -33,13 +33,20 @@ export default function HomePage() {
 
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isCreating) return;
-        if (!newSpace.trim()) return;
+        if (isCreating || !newSpace.trim()) return;
+
+        const validName = newSpace.trim();
+        // Allow only a-z, 0-9, _
+        if (!/^[a-zA-Z0-9_]+$/.test(validName)) {
+            alert("Space names can only contain letters, numbers, and underscores (_). Spaces and special characters are not allowed.");
+            return;
+        }
+        if (!validName) return;
 
         setIsCreating(true);
         try {
-            const token = (await getToken({ template: 'with-username' })) as string;
-            await createSpace(newSpace.trim(), desc.trim(), token);
+            const token = (await getToken({template: 'with-username'})) as string;
+            await createSpace(newSpace.trim().toLowerCase(), desc.trim(), token);
             setNewSpace('');
             setDesc('');
             await load(); // will show spinner while reloading
@@ -52,18 +59,22 @@ export default function HomePage() {
 
     return (
         <div>
-            <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Spaces</h2>
+            <h2 style={{fontSize: 22, fontWeight: 600, marginBottom: 8}}>Let's create a Space for you!</h2>
 
             <form
                 onSubmit={onCreate}
-                style={{ display: 'grid', gap: 8, marginBottom: 16 }}
+                style={{display: 'grid', gap: 8, marginBottom: 16}}
                 aria-busy={isCreating}
             >
                 <input
                     value={newSpace}
-                    onChange={(e) => setNewSpace(e.target.value)}
-                    placeholder="Let's create a new Space for you!"
-                    style={{ border: '1px solid #ddd', padding: 8 }}
+                    onChange={(e) => {
+                        // Remove all characters except a-z, A-Z, 0-9, _
+                        const val = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
+                        setNewSpace(val);
+                    }}
+                    placeholder="What would you like to call your space?"
+                    style={{border: '1px solid #ddd', padding: 8}}
                     disabled={isCreating}
                 />
 
@@ -72,7 +83,7 @@ export default function HomePage() {
                     onChange={(e) => setDesc(e.target.value)}
                     placeholder="Why not explain others what this space is all about?"
                     rows={3}
-                    style={{ border: '1px solid #ddd', padding: 8 }}
+                    style={{border: '1px solid #ddd', padding: 8}}
                     disabled={isCreating}
                 />
 
@@ -87,7 +98,7 @@ export default function HomePage() {
                   className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
                   aria-hidden="true"
               />
-              Creating…
+              Something is brewing... wait is it a Space?
             </span>
                     ) : (
                         'Create'
@@ -95,6 +106,7 @@ export default function HomePage() {
                 </button>
             </form>
 
+            <h3 style={{fontSize: 20, fontWeight: 600, marginBottom: 8}}>Or explore these existing Spaces:</h3>
             {isLoading ? (
                 <div className="flex items-center justify-center py-12 text-gray-600">
           <span
@@ -104,7 +116,7 @@ export default function HomePage() {
                     Loading spaces…
                 </div>
             ) : (
-                <ul style={{ display: 'grid', gap: 8 }}>
+                <ul style={{display: 'grid', gap: 8}}>
                     {spaces.map((s) => {
                         const display = s?.name ?? s?.id ?? JSON.stringify(s);
                         return (
