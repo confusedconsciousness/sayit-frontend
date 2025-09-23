@@ -11,7 +11,7 @@ import {
     upvoteComment,
     upvotePost,
 } from '@/lib/api';
-import {useAuth} from '@clerk/nextjs';
+import {RedirectToSignIn, useAuth} from '@clerk/nextjs';
 import {AppComment, Post} from '@/app/lib/types';
 import {getCachedData, invalidateCache} from '@/lib/cacheutils';
 import Link from "next/link";
@@ -27,8 +27,10 @@ function getCachedReplies(space: string, postId: string, commentId: number | str
 }
 
 export default function PostPage({params}: { params: Promise<{ space: string; postId: string }> }) {
-    const {getToken} = useAuth();
+    const {isSignedIn, getToken} = useAuth();
     const {space, postId} = React.use(params);
+
+    const [redirectToSignIn, setRedirectToSignIn] = React.useState(false);
 
     const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState(true);
@@ -54,6 +56,12 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
 
     const doVote = async (dir: 'up' | 'down') => {
         if (!post) return;
+
+        if (!isSignedIn) {
+            setRedirectToSignIn(true);
+            return;
+        }
+
         const originalPost = {...post};
         const newPost = {...post};
         if (dir === 'up') newPost.upvotes = (newPost.upvotes ?? 0) + 1;
@@ -84,6 +92,11 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
         e.preventDefault();
         if (!topComment.trim() || submittingTop) return;
 
+        if (!isSignedIn) {
+            setRedirectToSignIn(true);
+            return;
+        }
+
         setSubmittingTop(true);
         try {
             const token = (await getToken({template: 'with-username'})) as string;
@@ -109,6 +122,10 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 Loading post…
             </div>
         );
+    }
+
+    if (redirectToSignIn) {
+        return <RedirectToSignIn redirectUrl={window.location.href}/>;
     }
 
     return (
@@ -206,7 +223,9 @@ function CommentThread({
     comment: AppComment;
     depth?: number;
 }) {
-    const {getToken} = useAuth();
+    const {isSignedIn, getToken} = useAuth();
+
+    const [redirectToSignIn, setRedirectToSignIn] = useState(false);
     const [replyOpen, setReplyOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [children, setChildren] = useState<AppComment[] | null>(comment.comments ?? null);
@@ -230,6 +249,11 @@ function CommentThread({
     };
 
     const vote = async (dir: 'up' | 'down') => {
+
+        if (!isSignedIn) {
+            setRedirectToSignIn(true);
+            return;
+        }
         const originalState = {ups, downs};
         const upDelta = dir === 'up' ? 1 : 0;
         const downDelta = dir === 'down' ? 1 : 0;
@@ -255,6 +279,10 @@ function CommentThread({
         e.preventDefault();
         if (!replyText.trim() || replySubmitting) return;
 
+        if (!isSignedIn) {
+            setRedirectToSignIn(true);
+            return;
+        }
         setReplySubmitting(true);
         try {
             const token = (await getToken({template: 'with-username'})) as string;
@@ -273,6 +301,9 @@ function CommentThread({
         }
     };
 
+    if (redirectToSignIn) {
+        return <RedirectToSignIn redirectUrl={window.location.href}/>;
+    }
     return (
         <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
             <div style={{fontSize: 14}}>

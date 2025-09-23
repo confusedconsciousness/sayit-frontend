@@ -2,65 +2,80 @@
 
 import React, {useEffect, useState} from 'react';
 import {createSpace, getSpaces} from '@/lib/api';
-import {useAuth} from '@clerk/nextjs';
+import {RedirectToSignIn, useAuth} from '@clerk/nextjs';
 import Link from 'next/link';
-import {Space} from "@/app/lib/types";
-import {getCachedData, invalidateCache} from "@/lib/cacheutils";
+import {Space} from '@/app/lib/types';
+import {getCachedData, invalidateCache} from '@/lib/cacheutils';
 
 export default function HomePage() {
-    const {getToken} = useAuth();
+    const {isSignedIn, getToken} = useAuth();
+    const [redirectToSignIn, setRedirectToSignIn] = React.useState(false);
     const [spaces, setSpaces] = useState<Space[]>([]);
     const [newSpace, setNewSpace] = useState('');
     const [desc, setDesc] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-    const [isLoading, setIsLoading] = useState(true); // NEW
+    const [isLoading, setIsLoading] = useState(true);
 
-    const load = async () => {
-        setIsLoading(true); // NEW
+    const cacheKey = 'spaces';
+
+    const loadSpaces = async () => {
+        setIsLoading(true);
         try {
-            const data = await getCachedData('spaces', getSpaces);
+            const data = await getCachedData(cacheKey, getSpaces);
             setSpaces(data);
         } catch (e) {
-            console.error(e);
+            console.error('Failed to load spaces:', e);
         } finally {
-            setIsLoading(false); // NEW
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        load();
+        loadSpaces();
     }, []);
 
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isCreating || !newSpace.trim()) return;
 
-        const validName = newSpace.trim();
-        // Allow only a-z, 0-9, _
-        if (!/^[a-zA-Z0-9_]+$/.test(validName)) {
-            alert("Space names can only contain letters, numbers, and underscores (_). Spaces and special characters are not allowed.");
+        if (!isSignedIn) {
+            setRedirectToSignIn(true);
             return;
         }
-        if (!validName) return;
+        const validName = newSpace.trim();
+        if (!/^[a-zA-Z0-9_]+$/.test(validName)) {
+            alert(
+                "Space names can only contain letters, numbers, and underscores (_). Spaces and special characters are not allowed."
+            );
+            return;
+        }
 
         setIsCreating(true);
         try {
             const token = (await getToken({template: 'with-username'})) as string;
-            await createSpace(newSpace.trim().toLowerCase(), desc.trim(), token);
-            invalidateCache('spaces');
+            await createSpace(validName.toLowerCase(), desc.trim(), token);
+
+            invalidateCache(cacheKey);
             setNewSpace('');
             setDesc('');
-            await load(); // will show spinner while reloading
+            await loadSpaces();
         } catch (err) {
-            console.error(err);
+            console.error('Failed to create space:', err);
         } finally {
             setIsCreating(false);
         }
     };
 
+    if (redirectToSignIn) {
+        return <RedirectToSignIn redirectUrl={window.location.href}/>;
+    }
+
+
     return (
         <div>
-            <h2 style={{fontSize: 22, fontWeight: 600, marginBottom: 8}}>Let&apos;s create a Space for you!</h2>
+            <h2 style={{fontSize: 22, fontWeight: 600, marginBottom: 8}}>
+                Let&apos;s create a Space for you!
+            </h2>
 
             <form
                 onSubmit={onCreate}
@@ -70,7 +85,6 @@ export default function HomePage() {
                 <input
                     value={newSpace}
                     onChange={(e) => {
-                        // Remove all characters except a-z, A-Z, 0-9, _
                         const val = e.target.value.replace(/[^a-zA-Z0-9_]/g, '');
                         setNewSpace(val);
                     }}
@@ -107,7 +121,9 @@ export default function HomePage() {
                 </button>
             </form>
 
-            <h3 style={{fontSize: 20, fontWeight: 600, marginBottom: 8}}>Or explore these existing Spaces:</h3>
+            <h3 style={{fontSize: 20, fontWeight: 600, marginBottom: 8}}>
+                Or explore these existing Spaces:
+            </h3>
             {isLoading ? (
                 <div className="flex items-center justify-center py-12 text-gray-600">
           <span

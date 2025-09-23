@@ -2,10 +2,12 @@
 
 import React, {useEffect, useState} from 'react';
 import {createPost, getPosts, getSpace} from '@/lib/api';
-import {useAuth} from '@clerk/nextjs';
+import {RedirectToSignIn, useAuth} from '@clerk/nextjs';
 import {Post, Space} from '@/app/lib/types';
 import Link from 'next/link';
 import {getCachedData, invalidateCache} from "@/lib/cacheutils";
+import {redirect} from 'next/navigation';
+
 
 function getCachedPosts(space: string): Promise<Post[]> {
     return getCachedData<Post[]>(`posts_${space}`, () => getPosts(space));
@@ -16,8 +18,10 @@ function getCachedSpace(space: string): Promise<Space> {
 }
 
 export default function SpacePage({params}: { params: Promise<{ space: string }> }) {
-    const {getToken} = useAuth();
+    const {isSignedIn, getToken} = useAuth();
     const {space} = React.use(params);
+
+    const [redirectToSignIn, setRedirectToSignIn] = React.useState(false);
 
     const [spaceInfo, setSpaceInfo] = useState<Space>({});
     const [posts, setPosts] = useState<Post[]>([]);
@@ -37,7 +41,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
             setSpaceInfo(spaceData);
         } catch (e) {
             console.error(e);
-            alert('Failed to load posts');
+            redirect('/');
         } finally {
             setIsLoading(false);
         }
@@ -50,6 +54,11 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
     const onCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim() || isCreatingPost) return;
+
+        if (!isSignedIn) {
+            setRedirectToSignIn(true);
+            return;
+        }
 
         setIsCreatingPost(true);
         try {
@@ -69,9 +78,13 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
         }
     };
 
+    if (redirectToSignIn) {
+        return <RedirectToSignIn redirectUrl={window.location.href}/>;
+    }
+
     return (
         <div>
-            <Link href="/" style={{color: '#555'}}>← Back</Link>
+            <Link href="/public" style={{color: '#555'}}>← Back</Link>
             <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
             <div className="mt-2 mb-4 text-[#666]">{spaceInfo.description}</div>
 
