@@ -60,7 +60,7 @@ export default function HomePage() {
 
     return (
         <div>
-            <h2 style={{fontSize: 22, fontWeight: 600, marginBottom: 8}}>Let's create a Space for you!</h2>
+            <h2 style={{fontSize: 22, fontWeight: 600, marginBottom: 8}}>Let&apos;s create a Space for you!</h2>
 
             <form
                 onSubmit={onCreate}
