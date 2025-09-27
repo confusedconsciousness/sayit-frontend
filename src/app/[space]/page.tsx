@@ -7,7 +7,7 @@ import {Post, Space} from '@/app/lib/types';
 import Link from 'next/link';
 import {getCachedData, invalidateCache} from "@/lib/cacheutils";
 import {redirect} from 'next/navigation';
-
+import {formatTimeAgo} from "@/lib/timeutils";
 
 function getCachedPosts(space: string): Promise<Post[]> {
     return getCachedData<Post[]>(`posts_${space}`, () => getPosts(space));
@@ -67,9 +67,8 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
             setTitle('');
             setContent('');
 
-            // Invalidate cache after creating a post
             invalidateCache(`posts_${space}`)
-            await load(); // reload posts and space info
+            await load();
         } catch (error) {
             console.error('Failed to create post:', error);
             alert('Failed to create post. Please try again.');
@@ -85,7 +84,21 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
     return (
         <div>
             <Link href="/" style={{color: '#555'}}>← Back</Link>
-            <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    margin: '8px 0',
+                }}
+            >
+                <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
+
+                <div style={{fontSize: 15, color: '#6b7280', flexShrink: 0}}>
+                    by {spaceInfo.author ?? 'anon'} • {formatTimeAgo(spaceInfo.createdAt)}
+                </div>
+            </div>
             <div className="mt-2 mb-4 text-[#666]">{spaceInfo.description}</div>
 
             <form onSubmit={onCreate} style={{display: 'grid', gap: 8, marginBottom: 16}}>
@@ -136,8 +149,10 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                             <Link href={`/${encodeURIComponent(space)}/${p.id}`}>
                                 <div style={{fontWeight: 600}}>{p.title ?? `Post ${p.id}`}</div>
                                 <div style={{color: '#666'}}>{p.content?.slice(0, 140)}</div>
+                                {/* MODIFIED: Added the formatted timestamp */}
                                 <div style={{color: '#888', fontSize: 13, marginTop: 6}}>
-                                    by {p.author ?? 'anon'} • ▲{p.upvotes ?? 0} ▼{p.downvotes ?? 0}
+                                    by {p.author ?? 'anon'} • {formatTimeAgo(p.createdAt)} •
+                                    ▲{p.upvotes ?? 0} ▼{p.downvotes ?? 0}
                                 </div>
                             </Link>
                         </li>

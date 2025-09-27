@@ -6,6 +6,7 @@ import {RedirectToSignIn, useAuth} from '@clerk/nextjs';
 import Link from 'next/link';
 import {Space} from '@/app/lib/types';
 import {getCachedData, invalidateCache} from '@/lib/cacheutils';
+import {formatTimeAgo} from "@/lib/timeutils";
 
 export default function HomePage() {
     const {isSignedIn, getToken} = useAuth();
@@ -133,13 +134,20 @@ export default function HomePage() {
                     Loading spaces…
                 </div>
             ) : (
+                // MODIFIED: Reworked the list to show more details
                 <ul style={{display: 'grid', gap: 8}}>
                     {spaces.map((s) => {
-                        const display = s?.name ?? s?.id ?? JSON.stringify(s);
+                        const displayName = s?.name ?? s?.id;
+                        if (!displayName) return null; // Don't render if there's no name/id
+
                         return (
-                            <li key={display} className="border border-[#eee] p-2 flex">
-                                <Link className="w-full" href={`/${encodeURIComponent(display as string)}`}>
-                                    /s/{display}
+                            <li key={displayName} className="border border-gray-200 p-3 rounded-md">
+                                <Link href={`/${encodeURIComponent(displayName as string)}`}>
+                                    <h4 className="font-semibold text-lg hover:underline">/s/{displayName}</h4>
+                                    <p className="text-gray-600 my-1 text-sm">{s.description}</p>
+                                    <div className="text-xs text-gray-500">
+                                        created by {s.author ?? 'anon'} • {formatTimeAgo(s.createdAt)}
+                                    </div>
                                 </Link>
                             </li>
                         );

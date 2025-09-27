@@ -15,6 +15,8 @@ import {RedirectToSignIn, useAuth} from '@clerk/nextjs';
 import {AppComment, Post} from '@/app/lib/types';
 import {getCachedData, invalidateCache} from '@/lib/cacheutils';
 import Link from "next/link";
+import {formatTimeAgo} from "@/lib/timeutils";
+
 
 function getCachedPost(space: string, postId: string): Promise<Post> {
     return getCachedData<Post>((`post_${space}_${postId}`), () => getPost(space, postId));
@@ -145,7 +147,9 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 <h2 style={{fontSize: 22, fontWeight: 700, margin: 0}}>
                     {post.title ?? `Post ${post.id}`}
                 </h2>
-                <span style={{fontSize: 15, color: '#6b7280'}}>by {post.author ?? 'anon'}</span>
+                <div style={{fontSize: 15, color: '#6b7280', flexShrink: 0}}>
+                    by {post.author ?? 'anon'} • {formatTimeAgo(post.createdAt)}
+                </div>
             </div>
 
             <p style={{whiteSpace: 'pre-wrap', marginTop: 6}}>{post.content}</p>
@@ -316,11 +320,15 @@ function CommentThread({
 
     return (
         <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
-            <div style={{fontSize: 14}}>
-                <strong>{comment.author ?? 'anon'}</strong>: {comment.comment}
+            {/* MODIFIED: Restructured the comment header to include the timestamp */}
+            <div className="text-sm">
+                <span className="font-bold mr-2">{comment.author ?? 'anon'}</span>
+                <span className="text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
             </div>
+            <p className="mt-1">{comment.comment}</p>
 
-            <div style={{display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 6px', flexShrink: 0}}>
+
+            <div style={{display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 0', flexShrink: 0}}>
                 <button onClick={() => vote('up')} className="voteButton" aria-label="Upvote" title="Upvote">
                     ▲
                 </button>

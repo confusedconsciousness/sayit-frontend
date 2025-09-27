@@ -4,6 +4,7 @@ export interface AppComment {
     author?: string;
     comments?: AppComment[];
     upvotes?: number;
+    createdAt?: string; // ISO date string
     downvotes?: number;
 }
 
@@ -14,13 +15,16 @@ export interface Post {
     comments?: AppComment[]; // assuming backend may return top-level comments with the post
     upvotes?: number;
     downvotes?: number;
+    createdAt?: string; // ISO date string
     author?: string;
 }
 
 export interface Space {
     id?: string | number;
     name?: string;
-    description?: string
+    author?: string;
+    description?: string;
+    createdAt?: string; // ISO date string
 }
 
 export interface VoteCount {
