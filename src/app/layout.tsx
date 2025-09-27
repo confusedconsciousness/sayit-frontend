@@ -2,12 +2,13 @@
 import './globals.css';
 import React from 'react';
 import type {Metadata} from "next";
-import {ClerkProvider, UserButton} from "@clerk/nextjs";
+// MODIFIED: Import SignedIn, SignedOut, and SignInButton
+import {ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton} from "@clerk/nextjs";
 import Header from "@/components/Header";
 
 export const metadata: Metadata = {
     title: 'Sayit - It\'s your Space',
-    description: 'Spaces, posts, and nested comments',
+    description: 'A place where you can be yourself, share your thoughts, and connect with others.',
     icons: {
         icon: "/favicon.png"
     }
@@ -20,15 +21,37 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
             <body style={{fontFamily: 'ui-sans-serif, system-ui', padding: 24}}>
             <div style={{maxWidth: 900, margin: '0 auto'}}>
 
-                <div className={"flex justify-between align-middle mb-4"}>
+                <header className={"flex justify-between items-center mb-4"}>
                     <Header/>
-                    <UserButton/>
-                </div>
-                {children}
+                    <div>
+                        <SignedIn>
+                            <UserButton afterSignOutUrl="/" appearance={{
+                                elements: {
+                                    userButtonAvatarBox: {
+                                        width: "2.5rem",
+                                        height: "2.5rem"
+                                    }
+                                }
+                            }}/>
+                        </SignedIn>
+                        <SignedOut>
+                            {/* This button is shown to signed-out users */}
+                            <SignInButton mode="modal">
+                                <button
+                                    className="dark:bg-white dark:text-slate-700 cursor-pointer hover:dark:bg-zinc-200 dark:hover:text-black bg-black text-white font-semibold py-2 px-4 rounded-md hover:bg-zinc-700 transition-colors">
+                                    Sign In
+                                </button>
+                            </SignInButton>
+                        </SignedOut>
+                    </div>
+                </header>
+
+                <main>
+                    {children}
+                </main>
             </div>
             </body>
             </html>
-
         </ClerkProvider>
     );
 }
