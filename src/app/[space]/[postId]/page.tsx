@@ -17,7 +17,7 @@ import {getCachedData, invalidateCache} from '@/lib/cacheutils';
 import Link from "next/link";
 
 function getCachedPost(space: string, postId: string): Promise<Post> {
-    return getCachedData<Post>(`post_${space}_${postId}`, () => getPost(space, postId));
+    return getCachedData<Post>((`post_${space}_${postId}`), () => getPost(space, postId));
 }
 
 function getCachedReplies(space: string, postId: string, commentId: number | string): Promise<AppComment[]> {
@@ -79,7 +79,6 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 upvotes: updatedCounts.upvotes,
                 downvotes: updatedCounts.downvotes,
             }));
-            // Invalidate cache to ensure fresh data on next reload
             invalidateCache(`post_${space}_${postId}`);
         } catch (error) {
             console.error('Failed to vote:', error);
@@ -205,7 +204,7 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
             <h3 style={{marginTop: 24}}>Comments</h3>
             <div style={{display: 'grid', gap: 8, marginTop: 8}}>
                 {(post.comments ?? []).map((c) => (
-                    <CommentThread key={String(c.id)} space={space} postId={postId} comment={c}/>
+                    <CommentThread key={String(c.id)} space={space} postId={postId} comment={c} onActionSuccess={load}/>
                 ))}
             </div>
         </div>
@@ -216,11 +215,13 @@ function CommentThread({
                            space,
                            postId,
                            comment,
+                           onActionSuccess,
                            depth = 0,
                        }: {
     space: string;
     postId: string;
     comment: AppComment;
+    onActionSuccess: () => Promise<void>;
     depth?: number;
 }) {
     const {isSignedIn, getToken} = useAuth();
@@ -229,27 +230,32 @@ function CommentThread({
     const [replyOpen, setReplyOpen] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [children, setChildren] = useState<AppComment[] | null>(comment.comments ?? null);
+    const [areRepliesVisible, setAreRepliesVisible] = useState(false);
     const [loadingReplies, setLoadingReplies] = useState(false);
     const [replySubmitting, setReplySubmitting] = useState(false);
     const [ups, setUps] = useState<number>(comment.upvotes ?? 0);
     const [downs, setDowns] = useState<number>(comment.downvotes ?? 0);
 
-    const loadReplies = async () => {
-        if (children !== null) return;
-        setLoadingReplies(true);
-        try {
-            const data = await getCachedReplies(space, postId, comment.id);
-            setChildren(data);
-        } catch (e) {
-            console.error(e);
-            alert('Failed to load replies');
-        } finally {
-            setLoadingReplies(false);
+    const toggleRepliesVisibility = async () => {
+        const becomingVisible = !areRepliesVisible;
+        setAreRepliesVisible(becomingVisible);
+
+        if (becomingVisible && !children) {
+            setLoadingReplies(true);
+            try {
+                const data = await getCachedReplies(space, postId, comment.id);
+                setChildren(data);
+            } catch (e) {
+                console.error(e);
+                alert('Failed to load replies');
+                setAreRepliesVisible(false);
+            } finally {
+                setLoadingReplies(false);
+            }
         }
     };
 
     const vote = async (dir: 'up' | 'down') => {
-
         if (!isSignedIn) {
             setRedirectToSignIn(true);
             return;
@@ -287,12 +293,13 @@ function CommentThread({
         try {
             const token = (await getToken({template: 'with-username'})) as string;
             await addReply(space, postId, comment.id, replyText.trim(), token);
-            invalidateCache(`replies_${space}_${postId}_${comment.id}`);
 
             setReplyText('');
             setReplyOpen(false);
-            setChildren(null);
-            await loadReplies();
+
+            invalidateCache(`post_${space}_${postId}`);
+
+            await onActionSuccess();
         } catch (e) {
             console.error(e);
             alert('Failed to post reply');
@@ -304,6 +311,9 @@ function CommentThread({
     if (redirectToSignIn) {
         return <RedirectToSignIn redirectUrl={window.location.href}/>;
     }
+
+    const hasReplies = !comment.comments || comment.comments.length > 0;
+
     return (
         <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
             <div style={{fontSize: 14}}>
@@ -325,30 +335,19 @@ function CommentThread({
                 <button onClick={() => setReplyOpen((v) => !v)} style={{padding: '2px 6px', cursor: 'pointer'}}>
                     {replyOpen ? 'Cancel' : 'Reply'}
                 </button>
-                <button onClick={loadReplies} style={{padding: '2px 6px', cursor: 'pointer'}} disabled={loadingReplies}>
-                    {loadingReplies ? (
-                        <span className="inline-flex items-center text-gray-700">
-                            <span
-                                className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-                                aria-hidden="true"
-                            />
-                            Loading…
-                        </span>
-                    ) : (
-                        'Load replies'
-                    )}
-                </button>
-            </div>
 
-            {loadingReplies && children === null && (
-                <div className="mt-2 flex items-center text-gray-600">
-                    <span
-                        className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
-                        aria-hidden="true"
-                    />
-                    Loading replies…
-                </div>
-            )}
+                {hasReplies && (
+                    <button onClick={toggleRepliesVisibility} style={{padding: '2px 6px', cursor: 'pointer'}}
+                            disabled={loadingReplies}>
+                        {loadingReplies
+                            ? 'Loading…'
+                            : areRepliesVisible
+                                ? 'Hide replies'
+                                : 'View replies'
+                        }
+                    </button>
+                )}
+            </div>
 
             {replyOpen && (
                 <form onSubmit={submitReply} style={{display: 'grid', gap: 6, marginTop: 6}}
@@ -363,7 +362,7 @@ function CommentThread({
                     <button
                         type="submit"
                         style={{width: 'fit-content', padding: '4px 8px', cursor: 'pointer'}}
-                        disabled={replySubmitting}
+                        disabled={replySubmitting || !replyText.trim()}
                         aria-busy={replySubmitting}
                     >
                         {replySubmitting ? (
@@ -381,11 +380,11 @@ function CommentThread({
                 </form>
             )}
 
-            {children && children.length > 0 && (
+            {areRepliesVisible && children && children.length > 0 && (
                 <div style={{display: 'grid', gap: 8, marginTop: 8}}>
                     {children.map((child) => (
                         <CommentThread key={String(child.id)} space={space} postId={postId} comment={child}
-                                       depth={depth + 1}/>
+                                       onActionSuccess={onActionSuccess} depth={depth + 1}/>
                     ))}
                 </div>
             )}
