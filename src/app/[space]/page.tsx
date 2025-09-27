@@ -84,7 +84,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
 
     return (
         <div>
-            <Link href="/public" style={{color: '#555'}}>← Back</Link>
+            <Link href="/" style={{color: '#555'}}>← Back</Link>
             <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
             <div className="mt-2 mb-4 text-[#666]">{spaceInfo.description}</div>
 
