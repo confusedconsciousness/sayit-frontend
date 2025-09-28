@@ -8,6 +8,7 @@ import Link from 'next/link';
 import {getCachedData, invalidateCache} from "@/lib/cacheutils";
 import {redirect} from 'next/navigation';
 import {formatTimeAgo} from "@/lib/timeutils";
+import {FaRegComment} from "react-icons/fa";
 
 function getCachedPosts(space: string): Promise<Post[]> {
     return getCachedData<Post[]>(`posts_${space}`, () => getPosts(space));
@@ -95,7 +96,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
             >
                 <h2 style={{fontSize: 22, fontWeight: 600, margin: '8px 0'}}>/s/{space}</h2>
 
-                <div style={{fontSize: 15, color: '#6b7280', flexShrink: 0}}>
+                <div style={{fontSize: 15, color: '#888', flexShrink: 0}}>
                     by {spaceInfo.author ?? 'anon'} • {formatTimeAgo(spaceInfo.createdAt)}
                 </div>
             </div>
@@ -144,15 +145,26 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                 </div>
             ) : (
                 <ul style={{display: 'grid', gap: 8}}>
+                    <h2 className={'font-bold text-lg'}>Recent Posts: </h2>
                     {posts.map((p) => (
-                        <li key={String(p.id)} style={{border: '1px solid #eee', padding: 12}}>
+                        <li key={String(p.id)}
+                            className={'border-1 border-[#555] p-4 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors duration-200 rounded-md'}>
                             <Link href={`/${encodeURIComponent(space)}/${p.id}`}>
-                                <div style={{fontWeight: 600}}>{p.title ?? `Post ${p.id}`}</div>
-                                <div style={{color: '#666'}}>{p.content?.slice(0, 140)}</div>
-                                {/* MODIFIED: Added the formatted timestamp */}
                                 <div style={{color: '#888', fontSize: 13, marginTop: 6}}>
-                                    by {p.author ?? 'anon'} • {formatTimeAgo(p.createdAt)} •
-                                    ▲{p.upvotes ?? 0} ▼{p.downvotes ?? 0}
+                                    {p.author ?? 'anon'} {formatTimeAgo(p.createdAt)}
+
+                                </div>
+                                <h4 className={'font-semibold'}>{p.title ?? `Post ${p.id}`}</h4>
+                                <div className={'text-[#888] text-sm my-1'}>{p.content?.slice(0, 140)}</div>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <div
+                                        className={'max-w-max px-3 py-1 bg-[#EEE] dark:bg-zinc-800 text-[#555] dark:text-zinc-400 text-xs font-bold rounded-full'}>
+                                        ▲ {p.upvotes ?? 0 } ▼ {p.downvotes ?? 0}
+                                    </div>
+                                    <div className={'flex items-center text-sm text-gray-500'}>
+                                        <FaRegComment className="mr-1.5"/>
+                                        {p.comments?.length ?? 0}
+                                    </div>
                                 </div>
                             </Link>
                         </li>

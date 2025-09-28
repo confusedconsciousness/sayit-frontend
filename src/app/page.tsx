@@ -144,8 +144,8 @@ export default function HomePage() {
                             <li key={displayName} className="border border-gray-200 p-3 rounded-md">
                                 <Link href={`/${encodeURIComponent(displayName as string)}`}>
                                     <h4 className="font-semibold text-lg hover:underline">/s/{displayName}</h4>
-                                    <p className="text-gray-600 my-1 text-sm">{s.description}</p>
-                                    <div className="text-xs text-gray-500">
+                                    <p className="text-[#666] my-1 text-sm">{s.description}</p>
+                                    <div className="text-xs text-[#666]">
                                         created by {s.author ?? 'anon'} • {formatTimeAgo(s.createdAt)}
                                     </div>
                                 </Link>

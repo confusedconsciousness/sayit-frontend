@@ -1,6 +1,7 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
+import {BiSolidDownvote, BiSolidUpvote, BiUpvote} from "react-icons/bi";
 import {
     addComment,
     addReply,
@@ -147,7 +148,7 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 <h2 style={{fontSize: 22, fontWeight: 700, margin: 0}}>
                     {post.title ?? `Post ${post.id}`}
                 </h2>
-                <div style={{fontSize: 15, color: '#6b7280', flexShrink: 0}}>
+                <div style={{fontSize: 15, color: '#888', flexShrink: 0}}>
                     by {post.author ?? 'anon'} • {formatTimeAgo(post.createdAt)}
                 </div>
             </div>
@@ -160,17 +161,18 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: 6,
-                        border: '1px solid #e5e7eb',
+                        border: '2px solid #e5e7eb',
                         borderRadius: 9999,
-                        padding: '2px 8px',
                     }}
+
+                    className={'px-3 py-1 bg-[#EEE] dark:bg-zinc-800 text-[#555] dark:text-zinc-400 text-xs font-bold rounded-full'}
                 >
                     <button onClick={() => doVote('up')} className="voteButton">
-                        ▲
+                        <BiSolidUpvote className={'hover:text-black dark:hover:text-zinc-200'} size={'1rem'}/>
                     </button>
                     <span className="vote">{post.upvotes ?? 0}</span>
                     <button onClick={() => doVote('down')} className="voteButton">
-                        ▼
+                        <BiSolidDownvote className={'hover:text-black dark:hover:text-zinc-200'} size={'1rem'}/>
                     </button>
                     <span className="vote">{post.downvotes ?? 0}</span>
                 </div>
