@@ -151,7 +151,7 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                             className={'border-1 border-[#555] p-4 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors duration-200 rounded-md'}>
                             <Link href={`/${encodeURIComponent(space)}/${p.id}`}>
                                 <div style={{color: '#888', fontSize: 13, marginTop: 6}}>
-                                    {p.author ?? 'anon'} {formatTimeAgo(p.createdAt)}
+                                    {p.author ?? 'anon'} • {formatTimeAgo(p.createdAt)}
 
                                 </div>
                                 <h4 className={'font-semibold'}>{p.title ?? `Post ${p.id}`}</h4>
