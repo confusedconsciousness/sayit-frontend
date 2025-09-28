@@ -141,7 +141,9 @@ export default function HomePage() {
                         if (!displayName) return null; // Don't render if there's no name/id
 
                         return (
-                            <li key={displayName} className="border border-gray-200 p-3 rounded-md">
+                            <li key={displayName}
+                                className={'border-1 border-[#555] p-4 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors duration-200 rounded-md'}>
+
                                 <Link href={`/${encodeURIComponent(displayName as string)}`}>
                                     <h4 className="font-semibold text-lg hover:underline">/s/{displayName}</h4>
                                     <p className="text-[#666] my-1 text-sm">{s.description}</p>

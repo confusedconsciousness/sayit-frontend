@@ -1,7 +1,7 @@
 'use client';
 
 import React, {useEffect, useState} from 'react';
-import {BiSolidDownvote, BiSolidUpvote, BiUpvote} from "react-icons/bi";
+import {BiSolidDownvote, BiSolidUpvote} from "react-icons/bi";
 import {
     addComment,
     addReply,
@@ -164,7 +164,6 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                         border: '2px solid #e5e7eb',
                         borderRadius: 9999,
                     }}
-
                     className={'px-3 py-1 bg-[#EEE] dark:bg-zinc-800 text-[#555] dark:text-zinc-400 text-xs font-bold rounded-full'}
                 >
                     <button onClick={() => doVote('up')} className="voteButton">
@@ -207,8 +206,8 @@ export default function PostPage({params}: { params: Promise<{ space: string; po
                 </button>
             </form>
 
-            <h3 style={{marginTop: 24}}>Comments</h3>
-            <div style={{display: 'grid', gap: 8, marginTop: 8}}>
+            <h3 className={'font-semibold my-5'}>Recent Comments:</h3>
+            <div style={{display: 'grid', gap: 12, marginTop: 8}}>
                 {(post.comments ?? []).map((c) => (
                     <CommentThread key={String(c.id)} space={space} postId={postId} comment={c} onActionSuccess={load}/>
                 ))}
@@ -322,13 +321,19 @@ function CommentThread({
 
     return (
         <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
-            {/* MODIFIED: Restructured the comment header to include the timestamp */}
-            <div className="text-sm">
-                <span className="font-bold mr-2">{comment.author ?? 'anon'}</span>
-                <span className="text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
+            <div className="flex items-center">
+                {/* Avatar with initial */}
+                <div className="w-6 h-6 bg-zinc-300 rounded-full flex items-center justify-center mr-2 flex-shrink-0 select-none">
+                    <span className="text-xs font-bold text-zinc-600 dark:text-black">
+                        {(comment.author ?? 'A').charAt(0).toUpperCase()}
+                    </span>
+                </div>
+                <div>
+                    <span className="font-bold mr-2 select-none">{comment.author ?? 'anon'}</span>
+                    <span className="text-sm text-gray-500 select-none">{formatTimeAgo(comment.createdAt)}</span>
+                </div>
             </div>
-            <p className="mt-1">{comment.comment}</p>
-
+            <p className="mt-1 text-[#555] dark:text-[#888]">{comment.comment}</p>
 
             <div style={{display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 0', flexShrink: 0}}>
                 <button onClick={() => vote('up')} className="voteButton" aria-label="Upvote" title="Upvote">
@@ -391,7 +396,7 @@ function CommentThread({
             )}
 
             {areRepliesVisible && children && children.length > 0 && (
-                <div style={{display: 'grid', gap: 8, marginTop: 8}}>
+                <div style={{display: 'grid', gap: 10, marginTop: 8}}>
                     {children.map((child) => (
                         <CommentThread key={String(child.id)} space={space} postId={postId} comment={child}
                                        onActionSuccess={onActionSuccess} depth={depth + 1}/>
