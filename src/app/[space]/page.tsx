@@ -159,11 +159,11 @@ export default function SpacePage({params}: { params: Promise<{ space: string }>
                                 <div className="flex items-center gap-4 mt-2">
                                     <div
                                         className={'max-w-max px-3 py-1 bg-[#EEE] dark:bg-zinc-800 text-[#555] dark:text-zinc-400 text-xs font-bold rounded-full'}>
-                                        ▲ {p.upvotes ?? 0 } ▼ {p.downvotes ?? 0}
+                                        ▲ {p.upvotes ?? 0} ▼ {p.downvotes ?? 0}
                                     </div>
                                     <div className={'flex items-center text-sm text-gray-500'}>
                                         <FaRegComment className="mr-1.5"/>
-                                        {p.comments?.length ?? 0}
+                                        {p.commentCount ?? 0}
                                     </div>
                                 </div>
                             </Link>

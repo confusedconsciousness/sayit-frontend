@@ -66,7 +66,7 @@ export const addComment = (
     comment: string,
     token: string,
 ) =>
-    http<Comment>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments`, token, {
+    http<AppComment>(`/v1/spaces/${encodeURIComponent(space)}/posts/${postId}/comments`, token, {
         method: 'POST',
         body: JSON.stringify({comment}),
     });

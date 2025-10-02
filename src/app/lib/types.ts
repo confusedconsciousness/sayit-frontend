@@ -17,6 +17,7 @@ export interface Post {
     downvotes?: number;
     createdAt?: string; // ISO date string
     author?: string;
+    commentCount?: number;
 }
 
 export interface Space {

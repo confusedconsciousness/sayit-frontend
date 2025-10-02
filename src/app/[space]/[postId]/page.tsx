@@ -323,7 +323,8 @@ function CommentThread({
         <div style={{marginLeft: depth * 16, borderLeft: '2px solid #f2f2f2', paddingLeft: 8}}>
             <div className="flex items-center">
                 {/* Avatar with initial */}
-                <div className="w-6 h-6 bg-zinc-300 rounded-full flex items-center justify-center mr-2 flex-shrink-0 select-none">
+                <div
+                    className="w-6 h-6 bg-zinc-300 rounded-full flex items-center justify-center mr-2 flex-shrink-0 select-none">
                     <span className="text-xs font-bold text-zinc-600 dark:text-black">
                         {(comment.author ?? 'A').charAt(0).toUpperCase()}
                     </span>
