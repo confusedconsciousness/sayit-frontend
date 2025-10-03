@@ -2,7 +2,6 @@
 import './globals.css';
 import React from 'react';
 import type {Metadata} from "next";
-// MODIFIED: Import SignedIn, SignedOut, and SignInButton
 import {ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton} from "@clerk/nextjs";
 import Header from "@/components/Header";
 
@@ -11,6 +10,18 @@ export const metadata: Metadata = {
     description: 'A place where you can be yourself, share your thoughts, and connect with others.',
     icons: {
         icon: "/favicon.png"
+    },
+    openGraph: {
+        title: 'Sayit - It\'s your Space',
+        description: 'A place where you can be yourself, share your thoughts, and connect with others.',
+        images: [
+            {
+                url: '/favicon.png',
+                width: 800,
+                height: 600,
+            },
+        ],
+        siteName: 'Sayit'
     }
 };
 
@@ -19,6 +30,10 @@ export default function RootLayout({children}: { children: React.ReactNode }) {
         <ClerkProvider appearance={{cssLayerName: 'clerk'}}>
             <html lang="en">
             <body style={{fontFamily: 'ui-sans-serif, system-ui', padding: 24}}>
+            <meta
+                property={"og:image"}
+                content={"/favicon.png"}
+            />
             <div style={{maxWidth: 900, margin: '0 auto'}}>
 
                 <header className={"flex justify-between items-center mb-4"}>
